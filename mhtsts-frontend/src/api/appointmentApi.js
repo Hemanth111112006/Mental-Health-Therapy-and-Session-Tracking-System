@@ -4,21 +4,51 @@ export const appointmentApi = {
   getAllAppointments: async () => {
     const response = await api.get('/appointments');
     const appts = response.data.data || response.data;
-    return appts.map(appt => ({
-      ...appt,
-      date: appt.startTime ? appt.startTime.split('T')[0] : '',
-      startTime: appt.startTime ? appt.startTime.split('T')[1].substring(0, 5) : '',
-      endTime: appt.endTime ? appt.endTime.split('T')[1].substring(0, 5) : '',
-      type: appt.appointmentType,
-      telehealth: appt.modality === 'TELEHEALTH',
-      clientId: appt.participants?.[0]?.client?.id,
-      clientName: appt.participants?.[0]?.client ? `${appt.participants[0].client.firstName} ${appt.participants[0].client.lastName}` : 'Unknown'
-    }));
+    return appts.map(appt => {
+      let resolvedClientName = null;
+      if (appt.cancellationReason && appt.cancellationReason.includes('Client: ')) {
+        const match = appt.cancellationReason.match(/Client:\s*([^·\n()]+)/);
+        if (match && match[1]?.trim()) resolvedClientName = match[1].trim();
+      }
+      if (!resolvedClientName && appt.participants?.[0]?.client) {
+        const c = appt.participants[0].client;
+        if (c.firstName && !c.firstName.includes('=') && c.firstName !== 'Unknown') {
+          resolvedClientName = `${c.firstName} ${c.lastName || ''}`.trim();
+        } else if (c.email) {
+          resolvedClientName = c.email.split('@')[0];
+        }
+      }
+
+      return {
+        ...appt,
+        date: appt.startTime ? appt.startTime.split('T')[0] : '',
+        startTime: appt.startTime ? appt.startTime.split('T')[1].substring(0, 5) : '',
+        endTime: appt.endTime ? appt.endTime.split('T')[1].substring(0, 5) : '',
+        type: appt.appointmentType,
+        telehealth: appt.modality === 'TELEHEALTH',
+        clientId: appt.participants?.[0]?.client?.id,
+        clientName: resolvedClientName || 'Client'
+      };
+    });
   },
 
   getAppointmentById: async (id) => {
     const response = await api.get(`/appointments/${id}`);
     const appt = response.data.data || response.data;
+    let resolvedClientName = null;
+    if (appt.cancellationReason && appt.cancellationReason.includes('Client: ')) {
+      const match = appt.cancellationReason.match(/Client:\s*([^·\n()]+)/);
+      if (match && match[1]?.trim()) resolvedClientName = match[1].trim();
+    }
+    if (!resolvedClientName && appt.participants?.[0]?.client) {
+      const c = appt.participants[0].client;
+      if (c.firstName && !c.firstName.includes('=') && c.firstName !== 'Unknown') {
+        resolvedClientName = `${c.firstName} ${c.lastName || ''}`.trim();
+      } else if (c.email) {
+        resolvedClientName = c.email.split('@')[0];
+      }
+    }
+
     return {
       ...appt,
       date: appt.startTime ? appt.startTime.split('T')[0] : '',
@@ -27,7 +57,7 @@ export const appointmentApi = {
       type: appt.appointmentType,
       telehealth: appt.modality === 'TELEHEALTH',
       clientId: appt.participants?.[0]?.client?.id,
-      clientName: appt.participants?.[0]?.client ? `${appt.participants[0].client.firstName} ${appt.participants[0].client.lastName}` : 'Unknown'
+      clientName: resolvedClientName || 'Client'
     };
   },
 

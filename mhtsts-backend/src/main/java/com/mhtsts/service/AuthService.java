@@ -25,17 +25,20 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final TokenBlacklistRepository tokenBlacklistRepository;
+    private final com.mhtsts.repository.ClientRepository clientRepository;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager,
                        JwtUtil jwtUtil,
-                       TokenBlacklistRepository tokenBlacklistRepository) {
+                       TokenBlacklistRepository tokenBlacklistRepository,
+                       com.mhtsts.repository.ClientRepository clientRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.tokenBlacklistRepository = tokenBlacklistRepository;
+        this.clientRepository = clientRepository;
     }
 
     public AuthResponseDTO registerUser(UserDTO userDTO, String rawPassword) {
@@ -55,6 +58,8 @@ public class AuthService {
         user.setEmail(userDTO.getEmail());
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setRole(userDTO.getRole() != null ? userDTO.getRole().toUpperCase() : "CLIENT");
+        user.setFirstName(userDTO.getFirstName() != null && !userDTO.getFirstName().trim().isEmpty() ? userDTO.getFirstName().trim() : userDTO.getUsername());
+        user.setLastName(userDTO.getLastName() != null ? userDTO.getLastName().trim() : "");
         user.setCreatedDate(LocalDateTime.now());
         user.setIsActive(true);
 
@@ -67,11 +72,34 @@ public class AuthService {
         }
 
         User savedUser = userRepository.save(user);
+        Long createdClientId = null;
 
-        String token = jwtUtil.generateToken(savedUser.getId(), savedUser.getUsername(), savedUser.getRole());
+        if ("CLIENT".equalsIgnoreCase(savedUser.getRole())) {
+            try {
+                com.mhtsts.entity.Client client = new com.mhtsts.entity.Client();
+                client.setFirstName(savedUser.getFirstName());
+                client.setLastName(savedUser.getLastName() != null && !savedUser.getLastName().isEmpty() ? savedUser.getLastName() : "Client");
+                client.setEmail(savedUser.getEmail());
+                client.setPhoneNumber(userDTO.getPhone() != null && !userDTO.getPhone().trim().isEmpty() ? userDTO.getPhone().trim() : "555-0100");
+                client.setDateOfBirth(java.time.LocalDate.of(1995, 1, 1));
+                client.setEmergencyContactName("Emergency Contact");
+                client.setEmergencyContactPhone("555-0199");
+                client.setStatus(com.mhtsts.entity.enums.ClientStatus.ACTIVE);
+                userRepository.findById(2L).ifPresent(client::setAssignedTherapist);
+                com.mhtsts.entity.Client savedClient = clientRepository.save(client);
+                createdClientId = savedClient.getId();
+            } catch (Exception ignored) {}
+        }
+
+        String token = jwtUtil.generateToken(savedUser.getId(), savedUser.getUsername(), savedUser.getRole(), savedUser.getFirstName(), savedUser.getLastName(), createdClientId);
         Date expiration = jwtUtil.extractExpiration(token);
 
-        return new AuthResponseDTO(token, savedUser.getUsername(), savedUser.getRole(), expiration);
+        AuthResponseDTO response = new AuthResponseDTO(token, savedUser.getUsername(), savedUser.getRole(), expiration);
+        response.setUserId(savedUser.getId());
+        response.setFirstName(savedUser.getFirstName());
+        response.setLastName(savedUser.getLastName());
+        response.setClientId(createdClientId);
+        return response;
     }
 
     public AuthResponseDTO authenticateUser(String username, String password) {
@@ -86,10 +114,22 @@ public class AuthService {
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
+        Long clientId = null;
+        if ("CLIENT".equalsIgnoreCase(user.getRole())) {
+            try {
+                clientId = clientRepository.findByEmail(user.getEmail()).map(com.mhtsts.entity.Client::getId).orElse(null);
+            } catch (Exception ignored) {}
+        }
+
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole(), user.getFirstName(), user.getLastName(), clientId);
         Date expiration = jwtUtil.extractExpiration(token);
 
-        return new AuthResponseDTO(token, user.getUsername(), user.getRole(), expiration);
+        AuthResponseDTO response = new AuthResponseDTO(token, user.getUsername(), user.getRole(), expiration);
+        response.setUserId(user.getId());
+        response.setFirstName(user.getFirstName());
+        response.setLastName(user.getLastName());
+        response.setClientId(clientId);
+        return response;
     }
 
     public void logoutUser(String token) {

@@ -163,6 +163,7 @@ const ClientAppointmentsPage = () => {
   // Determine active client ID
   const getClientId = () => {
     if (currentUser?.clientId) return Number(currentUser.clientId);
+    if (currentUser?.id && typeof currentUser.id === 'number') return currentUser.id;
     const existing = appointments.find(a => a.clientId);
     if (existing?.clientId) return Number(existing.clientId);
     return 1;
@@ -178,6 +179,12 @@ const ClientAppointmentsPage = () => {
       const endHour = String((hour + 1) % 24).padStart(2, '0');
       const endTimeFormatted = `${endHour}:${startTimeFormatted.split(':')[1]}`;
 
+      const clientFullName = (currentUser?.firstName && currentUser?.lastName)
+        ? `${currentUser.firstName} ${currentUser.lastName}`.trim()
+        : (currentUser?.title || currentUser?.username || 'Client');
+      const clientContact = currentUser?.email || currentUser?.username || '';
+      const customNote = requestForm.notes ? ` - ${requestForm.notes}` : '';
+
       const payload = {
         date: requestForm.date,
         startTime: startTimeFormatted,
@@ -187,7 +194,7 @@ const ClientAppointmentsPage = () => {
         providerId: Number(requestForm.providerId),
         clientId: getClientId(),
         status: 'SCHEDULED',
-        notes: requestForm.notes || 'Session requested via client portal'
+        notes: `Client: ${clientFullName} (${clientContact})${customNote}`
       };
 
       await appointmentApi.scheduleAppointment(payload);

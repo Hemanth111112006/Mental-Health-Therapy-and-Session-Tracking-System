@@ -290,19 +290,26 @@ export function AuthProvider({ children }) {
       const { token, username, role } = responseData;
       const decoded = decodeJwt(token);
       
+      // Match mock user ONLY if email/username literally matches demo account
       const mockProfile = MOCK_USERS.find(u => 
         u.username?.toLowerCase() === username?.toLowerCase() || 
-        u.email?.toLowerCase() === username?.toLowerCase() ||
-        (role && u.role === role)
+        u.email?.toLowerCase() === email?.toLowerCase() ||
+        u.email?.toLowerCase() === username?.toLowerCase()
       );
 
+      const resolvedFirstName = responseData.firstName || decoded?.firstName || mockProfile?.firstName || username.split('@')[0] || 'User';
+      const resolvedLastName = responseData.lastName || decoded?.lastName || mockProfile?.lastName || '';
+
       const safeUser = { 
-        id: decoded?.userId || responseData.userId || mockProfile?.id || 1,
+        id: decoded?.userId || responseData.userId || (mockProfile?.id === 'usr_008' ? 8 : (mockProfile?.id === 'usr_004' ? 2 : 1)),
+        clientId: responseData.clientId || decoded?.clientId || null,
         username, 
+        email: responseData.email || email,
         role,
-        firstName: mockProfile?.firstName || username.split('@')[0] || 'User',
-        lastName: mockProfile?.lastName || '',
-        title: mockProfile?.title || ''
+        firstName: resolvedFirstName,
+        lastName: resolvedLastName,
+        title: `${resolvedFirstName} ${resolvedLastName}`.trim(),
+        avatar: (resolvedFirstName[0] || 'U').toUpperCase()
       };
 
       localStorage.setItem(TOKEN_KEY, token);
@@ -329,24 +336,34 @@ export function AuthProvider({ children }) {
     try {
       // Map frontend form data to backend UserDTO
       const userData = {
-        username: data.email.split('@')[0], // Derive username from email
+        username: data.email.split('@')[0],
         email: data.email,
         password: data.password,
         role: data.accountType === 'therapist' ? 'THERAPIST' : 'CLIENT',
         licenseNumber: data.licenseNumber || null,
+        firstName: data.firstName || '',
+        lastName: data.lastName || '',
+        phone: data.phone || ''
       };
       
       const responseData = await authApi.register(userData);
       
-      // Registration might not automatically log in the user depending on backend,
-      // but if it does return a token, we handle it:
       if (responseData && responseData.token) {
         const token = responseData.token;
+        const decoded = decodeJwt(token);
+        const resolvedFirstName = data.firstName || responseData.firstName || decoded?.firstName || userData.username;
+        const resolvedLastName = data.lastName || responseData.lastName || decoded?.lastName || '';
+
         const safeUser = {
+          id: responseData.userId || decoded?.userId || 1,
+          clientId: responseData.clientId || decoded?.clientId || null,
           username: responseData.username || userData.username,
+          email: userData.email,
           role: responseData.role || userData.role,
-          firstName: data.firstName || 'User',
-          lastName: data.lastName || ''
+          firstName: resolvedFirstName,
+          lastName: resolvedLastName,
+          title: `${resolvedFirstName} ${resolvedLastName}`.trim(),
+          avatar: (resolvedFirstName[0] || 'U').toUpperCase()
         };
   
         localStorage.setItem(TOKEN_KEY, token);

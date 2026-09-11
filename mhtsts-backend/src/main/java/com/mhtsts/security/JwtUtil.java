@@ -40,9 +40,16 @@ public class JwtUtil {
     }
 
     public String generateToken(Long userId, String username, String role) {
+        return generateToken(userId, username, role, null, null, null);
+    }
+
+    public String generateToken(Long userId, String username, String role, String firstName, String lastName, Long clientId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("role", role);
+        if (firstName != null) claims.put("firstName", firstName);
+        if (lastName != null) claims.put("lastName", lastName);
+        if (clientId != null) claims.put("clientId", clientId);
 
         long expirationMillis = getExpirationTimeForRole(role);
 

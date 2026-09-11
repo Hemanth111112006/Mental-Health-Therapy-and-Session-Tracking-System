@@ -13,6 +13,10 @@ public class AuthResponseDTO {
     
     private String username;
     private String role;
+    private Long userId;
+    private String firstName;
+    private String lastName;
+    private Long clientId;
     
     @JsonIgnore
     private Date expiration;
@@ -44,6 +48,18 @@ public class AuthResponseDTO {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
+
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+
+    public Long getClientId() { return clientId; }
+    public void setClientId(Long clientId) { this.clientId = clientId; }
 
     public Date getExpiration() { return expiration; }
     public void setExpiration(Date expiration) { this.expiration = expiration; }
