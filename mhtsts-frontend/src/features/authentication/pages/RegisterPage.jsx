@@ -101,9 +101,9 @@ const RegisterPage = () => {
         }
         break;
       case 4:
-        if (!formData.hipaaConsent) errs.hipaaConsent = 'HIPAA consent is required';
-        if (!formData.treatmentConsent) errs.treatmentConsent = 'Treatment consent is required';
-        if (!formData.termsAccepted) errs.termsAccepted = 'You must accept the terms';
+        if (!formData.hipaaConsent) errs.hipaaConsent = formData.accountType === 'therapist' ? 'HIPAA BAA agreement is required' : 'HIPAA consent is required';
+        if (!formData.treatmentConsent) errs.treatmentConsent = formData.accountType === 'therapist' ? 'Licensure & practice certification is required' : 'Treatment consent is required';
+        if (!formData.termsAccepted) errs.termsAccepted = formData.accountType === 'therapist' ? 'Clinician terms must be accepted' : 'You must accept the terms';
         break;
     }
     setErrors(errs);
@@ -282,17 +282,33 @@ const RegisterPage = () => {
             </div>
           </div>
         );
-      case 4:
+      case 4: {
+        const isTherapist = formData.accountType === 'therapist';
+        const consentList = isTherapist
+          ? [
+              { field: 'hipaaConsent', label: 'HIPAA Business Associate & PHI Security Agreement', desc: 'I agree to strictly comply with HIPAA Privacy & Security Rules, maintain client confidentiality, and safeguard all Protected Health Information (PHI).', required: true },
+              { field: 'treatmentConsent', label: 'Clinical Licensure & Scope of Practice Certification', desc: 'I certify that my healthcare license is active, valid, and in good standing, and I agree to practice strictly within my authorized clinical scope.', required: true },
+              { field: 'telehealthConsent', label: 'Telehealth Clinical Provider Standards', desc: 'I agree to deliver telehealth clinical services in accordance with state licensing regulations, clinical documentation standards, and emergency escalation protocols.', required: false },
+              { field: 'termsAccepted', label: 'Clinician Terms of Service & EHR Documentation Standards', desc: 'I agree to MindCare\'s Clinician Terms of Service, timely session documentation requirements, and electronic signature compliance.', required: true },
+            ]
+          : [
+              { field: 'hipaaConsent', label: 'HIPAA Notice of Privacy Practices', desc: 'I acknowledge receipt and review of the HIPAA Notice of Privacy Practices for MindCare.', required: true },
+              { field: 'treatmentConsent', label: 'Informed Consent for Outpatient Treatment', desc: 'I consent to outpatient mental health treatment and understand my rights as a client including the right to refuse or discontinue treatment at any time.', required: true },
+              { field: 'telehealthConsent', label: 'Telehealth Client Agreement', desc: 'I consent to receiving mental health services via secure telehealth and understand its benefits, limitations, and emergency guidelines.', required: false },
+              { field: 'termsAccepted', label: 'Patient Terms of Service & Privacy Policy', desc: 'I have read and agree to the MindCare Patient Terms of Service and Privacy Policy.', required: true },
+            ];
+
         return (
           <div>
-            <h3 style={{ marginBottom: 'var(--space-2)' }}>Consent & Agreement</h3>
-            <p style={{ marginBottom: 'var(--space-6)' }}>Please review and accept the following consent documents.</p>
-            {[
-              { field: 'hipaaConsent', label: 'HIPAA Notice of Privacy Practices', desc: 'I acknowledge receipt and review of the HIPAA Notice of Privacy Practices for MindCare.', required: true },
-              { field: 'treatmentConsent', label: 'Informed Consent for Treatment', desc: 'I consent to treatment and understand my rights as a client including the right to refuse treatment at any time.', required: true },
-              { field: 'telehealthConsent', label: 'Telehealth Consent', desc: 'I consent to receiving mental health services via telehealth and understand the limitations and risks.', required: false },
-              { field: 'termsAccepted', label: 'Terms of Service & Privacy Policy', desc: 'I have read and agree to the MindCare Terms of Service and Privacy Policy.', required: true },
-            ].map(c => (
+            <h3 style={{ marginBottom: 'var(--space-2)' }}>
+              {isTherapist ? 'Clinical Practitioner Agreements' : 'Consent & Agreement'}
+            </h3>
+            <p style={{ marginBottom: 'var(--space-6)' }}>
+              {isTherapist
+                ? 'Please review and accept the professional healthcare agreements and HIPAA compliance standards.'
+                : 'Please review and accept the following consent documents.'}
+            </p>
+            {consentList.map(c => (
               <div key={c.field} style={{
                 padding: 'var(--space-4)', border: `1px solid ${errors[c.field] ? 'var(--border-error)' : 'var(--border-primary)'}`,
                 borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-3)',
@@ -315,6 +331,7 @@ const RegisterPage = () => {
             ))}
           </div>
         );
+      }
       default:
         return null;
     }
@@ -322,7 +339,7 @@ const RegisterPage = () => {
 
   return (
     <AuthLayout>
-      <div className="mc-luxury-card" style={{ maxWidth: 520, margin: '0 auto' }}>
+      <div className="mc-luxury-card" style={{ maxWidth: 520, margin: 'auto', width: '100%' }}>
           <div className="mc-auth-form-header" style={{ marginBottom: 16 }}>
             <h2 style={{ fontWeight: 800, color: "#101828", fontSize: 18, letterSpacing: "-0.5px" }}>Create Account</h2>
             <p style={{ color: "#475467", fontSize: 12, marginTop: 4 }}>Step {currentStep} of 4</p>
