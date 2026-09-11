@@ -328,6 +328,43 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // ── Login with Token (OAuth2 / SSO) ─────────────────────────────────────
+  const loginWithToken = useCallback((token) => {
+    try {
+      const decoded = decodeJwt(token);
+      if (!decoded) {
+        throw new Error('Invalid JWT token received.');
+      }
+
+      const role = decoded.role || 'CLIENT';
+      const username = decoded.sub || 'user';
+      const resolvedFirstName = decoded.firstName || username.split('@')[0] || 'User';
+      const resolvedLastName = decoded.lastName || '';
+
+      const safeUser = {
+        id: decoded.userId || null,
+        clientId: decoded.clientId || null,
+        username,
+        email: username.includes('@') ? username : `${username}@oauth.mindcare.com`,
+        role,
+        firstName: resolvedFirstName,
+        lastName: resolvedLastName,
+        title: `${resolvedFirstName} ${resolvedLastName}`.trim(),
+        avatar: (resolvedFirstName[0] || 'U').toUpperCase(),
+      };
+
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(USER_KEY, JSON.stringify(safeUser));
+
+      setCurrentUser(safeUser);
+      setIsAuthenticated(true);
+      return safeUser;
+    } catch (err) {
+      console.error('Failed to login with token:', err);
+      throw err;
+    }
+  }, []);
+
   // ── Register ────────────────────────────────────────────────────────────
   const register = useCallback(async (data) => {
     setIsLoading(true);
@@ -429,6 +466,7 @@ export function AuthProvider({ children }) {
       error,
       showTimeoutWarning,
       login,
+      loginWithToken,
       logout,
       register,
       hasPermission,
@@ -441,6 +479,7 @@ export function AuthProvider({ children }) {
       error,
       showTimeoutWarning,
       login,
+      loginWithToken,
       logout,
       register,
       hasPermission,

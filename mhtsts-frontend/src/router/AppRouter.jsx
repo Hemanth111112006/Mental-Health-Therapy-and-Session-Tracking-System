@@ -17,6 +17,7 @@ import LoginPage from '../features/authentication/pages/LoginPage';
 import RegisterPage from '../features/authentication/pages/RegisterPage';
 import ForgotPasswordPage from '../features/authentication/pages/ForgotPasswordPage';
 import OtpVerificationPage from '../features/authentication/pages/OtpVerificationPage';
+import OAuth2RedirectHandler from '../features/authentication/pages/OAuth2RedirectHandler';
 
 // Lazy-loaded Dashboards
 const AdminDashboard = lazy(() => import('../features/dashboard/pages/AdminDashboard'));
@@ -159,6 +160,7 @@ const AppRouter = () => {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" />} />
         <Route path="/register" element={!isAuthenticated ? <RegisterPage /> : <Navigate to="/dashboard" />} />
+        <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/otp-verification" element={<OtpVerificationPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />

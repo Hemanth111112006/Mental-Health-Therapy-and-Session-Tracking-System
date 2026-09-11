@@ -77,8 +77,17 @@ const LoginPage = () => {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
 
   useEffect(() => {
-    // Rotation removed per user request for stable page
-  }, []);
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get("error");
+    if (errorParam) {
+      addToast(
+        "error",
+        "OAuth Authentication Notice",
+        decodeURIComponent(errorParam)
+      );
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [addToast]);
 
   const demoAccounts = [
     {
@@ -349,24 +358,16 @@ const LoginPage = () => {
   };
 
   const handleSocialClick = (provider) => {
-    const officialUrls = {
-      google: "https://accounts.google.com",
-      microsoft: "https://login.microsoftonline.com",
-      apple: "https://appleid.apple.com",
+    const backendBaseUrl = "http://localhost:8080";
+    const authEndpoints = {
+      google: `${backendBaseUrl}/oauth2/authorization/google`,
+      microsoft: `${backendBaseUrl}/oauth2/authorization/microsoft`,
+      apple: `${backendBaseUrl}/oauth2/authorization/apple`,
     };
-    const names = {
-      google: "Google",
-      microsoft: "Microsoft",
-      apple: "Apple",
-    };
-    const url = officialUrls[provider];
-    if (url) {
-      addToast(
-        "info",
-        `Official ${names[provider]} Portal`,
-        `Opening official ${names[provider]} website in a new tab...`
-      );
-      window.open(url, "_blank", "noopener,noreferrer");
+
+    const targetUrl = authEndpoints[provider];
+    if (targetUrl) {
+      window.location.href = targetUrl;
     }
   };
 
