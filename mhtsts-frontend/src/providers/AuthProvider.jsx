@@ -365,44 +365,6 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // ── Login with OAuth (Google, Microsoft, Apple) ─────────────────────────
-  const loginWithOAuth = useCallback(async (oauthData) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const responseData = await authApi.oauthLogin(oauthData);
-      const { token, username, role } = responseData;
-      const decoded = decodeJwt(token);
-
-      const resolvedFirstName = responseData.firstName || decoded?.firstName || 'User';
-      const resolvedLastName = responseData.lastName || decoded?.lastName || '';
-
-      const safeUser = {
-        id: responseData.userId || decoded?.userId || null,
-        clientId: responseData.clientId || decoded?.clientId || null,
-        username,
-        email: oauthData.email || responseData.email || username,
-        role,
-        firstName: resolvedFirstName,
-        lastName: resolvedLastName,
-        title: `${resolvedFirstName} ${resolvedLastName}`.trim(),
-        avatar: (resolvedFirstName[0] || 'U').toUpperCase(),
-      };
-
-      localStorage.setItem(TOKEN_KEY, token);
-      localStorage.setItem(USER_KEY, JSON.stringify(safeUser));
-
-      setCurrentUser(safeUser);
-      setIsAuthenticated(true);
-      setIsLoading(false);
-      return safeUser;
-    } catch (err) {
-      setIsLoading(false);
-      setError(err.message || 'OAuth authentication failed');
-      throw err;
-    }
-  }, []);
-
   // ── Register ────────────────────────────────────────────────────────────
   const register = useCallback(async (data) => {
     setIsLoading(true);
@@ -505,7 +467,6 @@ export function AuthProvider({ children }) {
       showTimeoutWarning,
       login,
       loginWithToken,
-      loginWithOAuth,
       logout,
       register,
       hasPermission,
@@ -519,7 +480,6 @@ export function AuthProvider({ children }) {
       showTimeoutWarning,
       login,
       loginWithToken,
-      loginWithOAuth,
       logout,
       register,
       hasPermission,

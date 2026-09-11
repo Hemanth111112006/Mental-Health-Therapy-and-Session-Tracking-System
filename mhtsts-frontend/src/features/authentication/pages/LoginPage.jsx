@@ -52,7 +52,7 @@ const LoginPage = () => {
   const [ssoLoading, setSsoLoading] = useState(false);
   const [ssoLoadingText, setSsoLoadingText] = useState("");
 
-  const { login, loginWithOAuth } = useAuth();
+  const { login } = useAuth();
   const { addToast } = useNotification();
   const navigate = useNavigate();
 
@@ -357,87 +357,17 @@ const LoginPage = () => {
     }
   };
 
-  const handleSocialClick = async (provider) => {
-    setIsLoading(true);
-
-    const providerConfigs = {
-      google: {
-        name: "Google",
-        officialUrl: "https://accounts.google.com/ServiceLogin",
-        email: activePortal === "CLIENT" ? "hemanthk1106@gmail.com" : "therapist@mindcare.com",
-        firstName: activePortal === "CLIENT" ? "Hemanth" : "Sarah",
-        lastName: activePortal === "CLIENT" ? "Kumar" : "Chen",
-        role: activePortal === "CLIENT" ? "CLIENT" : "THERAPIST",
-      },
-      microsoft: {
-        name: "Microsoft",
-        officialUrl: "https://login.microsoftonline.com",
-        email: activePortal === "CLIENT" ? "hemanth.client@outlook.com" : "psychiatrist@mindcare.com",
-        firstName: activePortal === "CLIENT" ? "Hemanth" : "Mark",
-        lastName: activePortal === "CLIENT" ? "Kumar" : "Rivera",
-        role: activePortal === "CLIENT" ? "CLIENT" : "PSYCHIATRIST",
-      },
-      apple: {
-        name: "Apple",
-        officialUrl: "https://appleid.apple.com/sign-in",
-        email: activePortal === "CLIENT" ? "hemanth.apple@privaterelay.appleid.com" : "psychologist@mindcare.com",
-        firstName: activePortal === "CLIENT" ? "Hemanth" : "Emily",
-        lastName: activePortal === "CLIENT" ? "Kumar" : "Chen",
-        role: activePortal === "CLIENT" ? "CLIENT" : "PSYCHOLOGIST",
-      },
+  const handleSocialClick = (provider) => {
+    const backendBaseUrl = "http://localhost:8080";
+    const authEndpoints = {
+      google: `${backendBaseUrl}/oauth2/authorization/google`,
+      microsoft: `${backendBaseUrl}/oauth2/authorization/microsoft`,
+      apple: `${backendBaseUrl}/oauth2/authorization/apple`,
     };
 
-    const config = providerConfigs[provider];
-    if (!config) {
-      setIsLoading(false);
-      return;
-    }
-
-    // Open genuine official sign-in page without OAuth client_id errors
-    const popupWidth = 520;
-    const popupHeight = 650;
-    const left = window.screen.width / 2 - popupWidth / 2;
-    const top = window.screen.height / 2 - popupHeight / 2;
-    const popup = window.open(
-      config.officialUrl,
-      `${provider}_auth_window`,
-      `width=${popupWidth},height=${popupHeight},top=${top},left=${left},status=no,toolbar=no,menubar=no`
-    );
-
-    addToast(
-      "info",
-      `Official ${config.name} Sign-In`,
-      `Opening official ${config.name} sign-in portal...`
-    );
-
-    try {
-      // Authenticate via backend and issue real JWT token
-      const user = await loginWithOAuth({
-        provider,
-        email: config.email,
-        firstName: config.firstName,
-        lastName: config.lastName,
-        role: config.role,
-      });
-
-      // Close the popup after successful sign-in
-      if (popup && !popup.closed) {
-        setTimeout(() => {
-          try { popup.close(); } catch {}
-        }, 1200);
-      }
-
-      addToast(
-        "success",
-        `${config.name} Authentication Successful`,
-        `Welcome back, ${user.firstName} ${user.lastName}!`
-      );
-
-      navigate(user.role === "CLIENT" ? "/client/dashboard" : "/dashboard");
-    } catch (err) {
-      addToast("error", `${config.name} Sign-In Failed`, err.message || "Authentication could not be completed");
-    } finally {
-      setIsLoading(false);
+    const targetUrl = authEndpoints[provider];
+    if (targetUrl) {
+      window.location.href = targetUrl;
     }
   };
 

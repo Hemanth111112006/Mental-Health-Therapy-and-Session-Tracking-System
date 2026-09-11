@@ -14,11 +14,8 @@ import org.springframework.stereotype.Service;
 import com.mhtsts.repository.TokenBlacklistRepository;
 import com.mhtsts.entity.TokenBlacklist;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
-import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -145,78 +142,6 @@ public class AuthService {
             try {
                 clientId = clientRepository.findByEmail(user.getEmail()).map(com.mhtsts.entity.Client::getId).orElse(null);
             } catch (Exception ignored) {}
-        }
-
-        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole(), user.getFirstName(), user.getLastName(), clientId);
-        Date expiration = jwtUtil.extractExpiration(token);
-
-        AuthResponseDTO response = new AuthResponseDTO(token, user.getUsername(), user.getRole(), expiration);
-        response.setUserId(user.getId());
-        response.setFirstName(user.getFirstName());
-        response.setLastName(user.getLastName());
-        response.setClientId(clientId);
-        return response;
-    }
-
-    public AuthResponseDTO authenticateOAuthUser(String provider, String email, String firstName, String lastName, String role) {
-        if (email == null || email.trim().isEmpty()) {
-            email = "user_" + UUID.randomUUID().toString().substring(0, 8) + "@oauth.mindcare.com";
-        }
-        final String userEmail = email.trim();
-        final String userRole = role != null ? role.toUpperCase() : "CLIENT";
-
-        Optional<User> userOptional = userRepository.findByEmail(userEmail);
-        User user;
-        Long clientId = null;
-
-        if (userOptional.isPresent()) {
-            user = userOptional.get();
-            user.setLastLogin(LocalDateTime.now());
-            userRepository.save(user);
-
-            if ("CLIENT".equalsIgnoreCase(user.getRole())) {
-                try {
-                    clientId = clientRepository.findByEmail(userEmail).map(com.mhtsts.entity.Client::getId).orElse(null);
-                } catch (Exception ignored) {}
-            }
-        } else {
-            user = new User();
-            String usernameCandidate = userEmail.split("@")[0].replaceAll("[^a-zA-Z0-9._-]", "");
-            if (usernameCandidate.isEmpty()) usernameCandidate = "user";
-            if (userRepository.findByUsername(usernameCandidate).isPresent()) {
-                usernameCandidate = usernameCandidate + "_" + UUID.randomUUID().toString().substring(0, 4);
-            }
-            user.setUsername(usernameCandidate);
-            user.setEmail(userEmail);
-            user.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
-            user.setRole(userRole);
-            user.setFirstName(firstName != null && !firstName.trim().isEmpty() ? firstName.trim() : "User");
-            user.setLastName(lastName != null ? lastName.trim() : "");
-            user.setCreatedDate(LocalDateTime.now());
-            user.setLastLogin(LocalDateTime.now());
-            user.setIsActive(true);
-            User savedUser = userRepository.save(user);
-            user = savedUser;
-
-            if ("CLIENT".equalsIgnoreCase(userRole)) {
-                try {
-                    com.mhtsts.entity.Client client = new com.mhtsts.entity.Client();
-                    client.setFirstName(user.getFirstName());
-                    client.setLastName(user.getLastName().isEmpty() ? "User" : user.getLastName());
-                    client.setEmail(userEmail);
-                    client.setPhoneNumber("555-0100");
-                    client.setDateOfBirth(LocalDate.of(1995, 1, 1));
-                    client.setGender("Other");
-                    client.setEmergencyContactName("Emergency Contact");
-                    client.setEmergencyContactPhone("555-0199");
-                    client.setStatus(com.mhtsts.entity.enums.ClientStatus.ACTIVE);
-                    userRepository.findById(2L).ifPresent(client::setAssignedTherapist);
-                    com.mhtsts.entity.Client savedClient = clientRepository.save(client);
-                    clientId = savedClient.getId();
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
         }
 
         String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole(), user.getFirstName(), user.getLastName(), clientId);
