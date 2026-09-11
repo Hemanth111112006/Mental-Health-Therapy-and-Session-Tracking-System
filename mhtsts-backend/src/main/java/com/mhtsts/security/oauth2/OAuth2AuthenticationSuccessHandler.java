@@ -62,7 +62,16 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         // 1. Extract email
         String email = oAuth2User.getAttribute("email");
         if (email == null) email = oAuth2User.getAttribute("mail");
+        if (email == null) email = oAuth2User.getAttribute("preferred_username");
         if (email == null) email = oAuth2User.getAttribute("userPrincipalName");
+        if (email != null && email.contains("#EXT#")) {
+            int extIdx = email.indexOf("#EXT#");
+            String prefix = email.substring(0, extIdx);
+            int lastUnderscore = prefix.lastIndexOf('_');
+            if (lastUnderscore > 0) {
+                email = prefix.substring(0, lastUnderscore) + "@" + prefix.substring(lastUnderscore + 1);
+            }
+        }
         if (email == null) {
             String sub = oAuth2User.getAttribute("sub");
             if (sub == null) sub = oAuth2User.getAttribute("id");

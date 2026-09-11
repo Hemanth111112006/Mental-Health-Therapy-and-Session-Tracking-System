@@ -34,6 +34,9 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDTO> login(@RequestBody Map<String, String> loginRequest) {
         String username = loginRequest.get("username");
+        if (username == null || username.trim().isEmpty()) {
+            username = loginRequest.get("email");
+        }
         String password = loginRequest.get("password");
 
         AuthResponseDTO authResponse = authService.authenticateUser(username, password);
