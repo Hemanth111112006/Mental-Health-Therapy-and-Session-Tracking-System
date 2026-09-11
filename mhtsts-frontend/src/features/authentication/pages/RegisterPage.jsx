@@ -19,12 +19,6 @@ import Select from '../../../components/forms/Select';
 import Checkbox from '../../../components/forms/Checkbox';
 import Textarea from '../../../components/forms/Textarea';
 
-const STEPS = [
-  { number: 1, label: 'Account Type' },
-  { number: 2, label: 'Personal Info' },
-  { number: 3, label: 'Verification' },
-  { number: 4, label: 'Consent' },
-];
 
 const RegisterPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -337,6 +331,13 @@ const RegisterPage = () => {
     }
   };
 
+  const steps = [
+    { number: 1, label: 'Account Type' },
+    { number: 2, label: 'Personal Info' },
+    { number: 3, label: formData.accountType === 'therapist' ? 'Licensure' : 'Intake Info' },
+    { number: 4, label: 'Consent' },
+  ];
+
   return (
     <AuthLayout>
       <div className="mc-luxury-card" style={{ maxWidth: 520, margin: 'auto', width: '100%' }}>
@@ -347,7 +348,7 @@ const RegisterPage = () => {
 
           {/* Step Indicator */}
           <div className="mc-steps">
-            {STEPS.map((step, i) => (
+            {steps.map((step, i) => (
               <div key={step.number} style={{ display: 'flex', alignItems: 'center' }}>
                 <div className={`mc-step ${currentStep === step.number ? 'active' : ''} ${currentStep > step.number ? 'completed' : ''}`}>
                   <div className="mc-step-number">
@@ -355,7 +356,7 @@ const RegisterPage = () => {
                   </div>
                   <span className="mc-step-label">{step.label}</span>
                 </div>
-                {i < STEPS.length - 1 && <div className={`mc-step-connector ${currentStep > step.number ? 'completed' : ''}`} />}
+                {i < steps.length - 1 && <div className={`mc-step-connector ${currentStep > step.number ? 'completed' : ''}`} />}
               </div>
             ))}
           </div>

@@ -334,16 +334,37 @@ export function AuthProvider({ children }) {
     setError(null);
 
     try {
+      // Determine specific role for practitioner vs client
+      let assignedRole = 'CLIENT';
+      if (data.accountType === 'therapist') {
+        if (data.licenseType === 'MD') {
+          assignedRole = 'PSYCHIATRIST';
+        } else if (data.licenseType === 'PsyD' || data.licenseType === 'PhD') {
+          assignedRole = 'PSYCHOLOGIST';
+        } else {
+          assignedRole = 'THERAPIST';
+        }
+      }
+
       // Map frontend form data to backend UserDTO
       const userData = {
         username: data.email.split('@')[0],
         email: data.email,
         password: data.password,
-        role: data.accountType === 'therapist' ? 'THERAPIST' : 'CLIENT',
+        role: assignedRole,
         licenseNumber: data.licenseNumber || null,
+        licenseType: data.licenseType || null,
+        licenseState: data.licenseState || null,
         firstName: data.firstName || '',
         lastName: data.lastName || '',
-        phone: data.phone || ''
+        phone: data.phone || '',
+        dateOfBirth: data.dateOfBirth || null,
+        gender: data.gender || null,
+        emergencyContactName: data.emergencyContactName || null,
+        emergencyContactPhone: data.emergencyContactPhone || null,
+        insuranceProvider: data.insuranceProvider || null,
+        insuranceMemberId: data.insuranceMemberId || null,
+        presentingConcern: data.presentingConcern || null
       };
       
       const responseData = await authApi.register(userData);

@@ -29,6 +29,15 @@ public class UserDTO {
     private String firstName;
     private String lastName;
     private String phone;
+    private String licenseType;
+    private String licenseState;
+    private String dateOfBirth;
+    private String gender;
+    private String emergencyContactName;
+    private String emergencyContactPhone;
+    private String insuranceProvider;
+    private String insuranceMemberId;
+    private String presentingConcern;
 
     public UserDTO() {}
 
@@ -69,4 +78,31 @@ public class UserDTO {
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
+
+    public String getLicenseType() { return licenseType; }
+    public void setLicenseType(String licenseType) { this.licenseType = licenseType; }
+
+    public String getLicenseState() { return licenseState; }
+    public void setLicenseState(String licenseState) { this.licenseState = licenseState; }
+
+    public String getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(String dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+
+    public String getGender() { return gender; }
+    public void setGender(String gender) { this.gender = gender; }
+
+    public String getEmergencyContactName() { return emergencyContactName; }
+    public void setEmergencyContactName(String emergencyContactName) { this.emergencyContactName = emergencyContactName; }
+
+    public String getEmergencyContactPhone() { return emergencyContactPhone; }
+    public void setEmergencyContactPhone(String emergencyContactPhone) { this.emergencyContactPhone = emergencyContactPhone; }
+
+    public String getInsuranceProvider() { return insuranceProvider; }
+    public void setInsuranceProvider(String insuranceProvider) { this.insuranceProvider = insuranceProvider; }
+
+    public String getInsuranceMemberId() { return insuranceMemberId; }
+    public void setInsuranceMemberId(String insuranceMemberId) { this.insuranceMemberId = insuranceMemberId; }
+
+    public String getPresentingConcern() { return presentingConcern; }
+    public void setPresentingConcern(String presentingConcern) { this.presentingConcern = presentingConcern; }
 }

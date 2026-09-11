@@ -65,10 +65,12 @@ public class AuthService {
 
         if ("THERAPIST".equalsIgnoreCase(user.getRole()) || "PSYCHIATRIST".equalsIgnoreCase(user.getRole()) || "PSYCHOLOGIST".equalsIgnoreCase(user.getRole())) {
             if (userDTO.getLicenseNumber() != null && !userDTO.getLicenseNumber().trim().isEmpty()) {
-                user.setLicenseNumber(userDTO.getLicenseNumber());
+                user.setLicenseNumber(userDTO.getLicenseNumber().replaceAll("[^a-zA-Z0-9]", ""));
             } else {
-                user.setLicenseNumber("TEMP" + System.currentTimeMillis());
+                user.setLicenseNumber("LIC" + (System.currentTimeMillis() % 1000000));
             }
+            if (userDTO.getLicenseType() != null) user.setLicenseType(userDTO.getLicenseType());
+            if (userDTO.getLicenseState() != null) user.setLicenseState(userDTO.getLicenseState());
         }
 
         User savedUser = userRepository.save(user);
@@ -81,14 +83,35 @@ public class AuthService {
                 client.setLastName(savedUser.getLastName() != null && !savedUser.getLastName().isEmpty() ? savedUser.getLastName() : "Client");
                 client.setEmail(savedUser.getEmail());
                 client.setPhoneNumber(userDTO.getPhone() != null && !userDTO.getPhone().trim().isEmpty() ? userDTO.getPhone().trim() : "555-0100");
-                client.setDateOfBirth(java.time.LocalDate.of(1995, 1, 1));
-                client.setEmergencyContactName("Emergency Contact");
-                client.setEmergencyContactPhone("555-0199");
+
+                if (userDTO.getDateOfBirth() != null && !userDTO.getDateOfBirth().trim().isEmpty()) {
+                    try {
+                        client.setDateOfBirth(java.time.LocalDate.parse(userDTO.getDateOfBirth().trim()));
+                    } catch (Exception e) {
+                        client.setDateOfBirth(java.time.LocalDate.of(1995, 1, 1));
+                    }
+                } else {
+                    client.setDateOfBirth(java.time.LocalDate.of(1995, 1, 1));
+                }
+
+                if (userDTO.getGender() != null && !userDTO.getGender().trim().isEmpty()) {
+                    client.setGender(userDTO.getGender().trim());
+                }
+
+                client.setEmergencyContactName(userDTO.getEmergencyContactName() != null && !userDTO.getEmergencyContactName().trim().isEmpty()
+                        ? userDTO.getEmergencyContactName().trim()
+                        : "Emergency Contact");
+                client.setEmergencyContactPhone(userDTO.getEmergencyContactPhone() != null && !userDTO.getEmergencyContactPhone().trim().isEmpty()
+                        ? userDTO.getEmergencyContactPhone().trim()
+                        : "555-0199");
+
                 client.setStatus(com.mhtsts.entity.enums.ClientStatus.ACTIVE);
                 userRepository.findById(2L).ifPresent(client::setAssignedTherapist);
                 com.mhtsts.entity.Client savedClient = clientRepository.save(client);
                 createdClientId = savedClient.getId();
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         String token = jwtUtil.generateToken(savedUser.getId(), savedUser.getUsername(), savedUser.getRole(), savedUser.getFirstName(), savedUser.getLastName(), createdClientId);
