@@ -40,6 +40,18 @@ public class AuthController {
         return ResponseEntity.ok(authResponse);
     }
 
+    @PostMapping("/oauth-login")
+    public ResponseEntity<AuthResponseDTO> oauthLogin(@RequestBody Map<String, String> request) {
+        String provider = request.getOrDefault("provider", "google");
+        String email = request.getOrDefault("email", "hemanthk1106@gmail.com");
+        String firstName = request.getOrDefault("firstName", "Hemanth");
+        String lastName = request.getOrDefault("lastName", "Kumar");
+        String role = request.getOrDefault("role", "CLIENT");
+
+        AuthResponseDTO authResponse = authService.authenticateOAuthUser(provider, email, firstName, lastName, role);
+        return ResponseEntity.ok(authResponse);
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<String>> logout(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
