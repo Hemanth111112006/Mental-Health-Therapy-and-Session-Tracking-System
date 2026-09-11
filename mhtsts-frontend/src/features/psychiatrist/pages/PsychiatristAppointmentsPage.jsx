@@ -140,13 +140,26 @@ const PsychiatristAppointmentsPage = () => {
         }
       }
 
-      // Merge today's psychiatric appointments at top
-      const merged = [
-        ...PSYCHIATRIST_SEEDED_APPOINTMENTS,
-        ...uniqueBackend.filter(b => b.date !== todayKey)
-      ];
+      // Sort backend appointments: newest/upcoming first
+      const sortedBackend = [...uniqueBackend].sort((a, b) => {
+        const dateA = new Date((a.date || '') + 'T' + (a.startTime || '00:00'));
+        const dateB = new Date((b.date || '') + 'T' + (b.startTime || '00:00'));
+        return dateB - dateA;
+      });
 
-      setAppointments(merged);
+      // Prioritize appointments for psychiatrist, or display all incoming bookings
+      const psychAppointments = sortedBackend.filter(a => 
+        !a.therapist || 
+        a.therapist.id === 4 || 
+        (a.therapist.role || '').toUpperCase() === 'PSYCHIATRIST' || 
+        a.therapist.username === 'psychiatrist@mindcare.com'
+      );
+
+      const finalAppointments = psychAppointments.length > 0 
+        ? psychAppointments 
+        : (sortedBackend.length > 0 ? sortedBackend : PSYCHIATRIST_SEEDED_APPOINTMENTS);
+
+      setAppointments(finalAppointments);
     } catch (err) {
       setAppointments(PSYCHIATRIST_SEEDED_APPOINTMENTS);
     } finally {

@@ -23,6 +23,38 @@ const ReceptionistDashboard = () => {
     { id: 6, time: '04:00 PM', client: 'Taylor Morgan', therapist: 'Dr. Sarah Chen, LCSW', room: 'Room 204', status: 'SCHEDULED', copay: 30, copayPaid: false }
   ]);
 
+  useEffect(() => {
+    let mounted = true;
+    appointmentApi.getAllAppointments()
+      .then(data => {
+        if (mounted && Array.isArray(data) && data.length > 0) {
+          const formatted = data.map((a, idx) => {
+            const clientName = a.clientName && a.clientName !== 'Unknown'
+              ? a.clientName
+              : (a.participants?.[0]?.client ? `${a.participants[0].client.firstName || ''} ${a.participants[0].client.lastName || ''}`.trim() : 'Patient');
+            const therapistName = a.therapist?.username === 'therapist@mindcare.com' ? 'Dr. Sarah Chen, LCSW'
+              : (a.therapist?.username === 'psychiatrist@mindcare.com' ? 'Dr. Mark Rivera, MD'
+              : (a.therapist?.username === 'psychologist@mindcare.com' ? 'Dr. Maya Patel, PsyD'
+              : (a.therapist?.firstName ? `${a.therapist.firstName} ${a.therapist.lastName || ''}`.trim() : 'Staff Provider')));
+            return {
+              id: a.id,
+              time: a.startTime ? `${a.startTime} ${a.date ? '(' + a.date + ')' : ''}` : '10:00 AM',
+              client: clientName,
+              therapist: therapistName,
+              room: idx % 2 === 0 ? 'Room 204' : 'Room 108',
+              status: a.status || 'SCHEDULED',
+              copay: 25,
+              copayPaid: a.status === 'COMPLETED'
+            };
+          });
+          formatted.reverse();
+          setAppointments(formatted);
+        }
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
   const [insuranceVerifications, setInsuranceVerifications] = useState([
     { id: 101, client: 'Sarah Connor', policy: 'Blue Shield California (PPO)', copayExpected: '$35.00', status: 'VERIFIED' },
     { id: 102, client: 'David Wilson', policy: 'Aetna POS Choice', copayExpected: '$15.00', status: 'PENDING' },

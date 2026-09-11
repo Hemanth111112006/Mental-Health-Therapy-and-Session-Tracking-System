@@ -1,6 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../providers/AuthProvider';
+import { appointmentApi } from '../../../api/appointmentApi';
+import { clientApi } from '../../../api/clientApi';
+import { toast } from '../../../utils/toast';
 
 // ─── Inline SVG Icons ────────────────────────────────────────────────────────
 
@@ -95,10 +98,56 @@ const TherapistDashboard = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
-  const doctorName = currentUser?.name || currentUser?.title || 'Dr. Therapist';
+  const [appointments, setAppointments] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      appointmentApi.getAllAppointments().catch(() => []),
+      clientApi.getAllClients().catch(() => [])
+    ]).then(([apptData, clientData]) => {
+      if (mounted) {
+        setAppointments(Array.isArray(apptData) ? apptData : []);
+        setClients(Array.isArray(clientData) ? clientData : []);
+        setLoading(false);
+      }
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  const todayKey = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  // Filter therapist appointments
+  const therapistAppts = useMemo(() => {
+    return appointments.filter(a =>
+      !a.therapist ||
+      a.therapist.id === 2 ||
+      a.therapist.id === currentUser?.id ||
+      a.therapist.username === 'therapist@mindcare.com' ||
+      (a.therapist.role || '').toUpperCase() === 'THERAPIST'
+    );
+  }, [appointments, currentUser]);
+
+  const todaysSessions = useMemo(() => {
+    return therapistAppts.filter(a => a.date === todayKey);
+  }, [therapistAppts, todayKey]);
+
+  const upcomingSessions = useMemo(() => {
+    const list = therapistAppts.filter(a => (a.date || '') >= todayKey && a.status !== 'CANCELLED' && a.status !== 'COMPLETED');
+    list.sort((a, b) => new Date(a.date + 'T' + (a.startTime || '00:00')) - new Date(b.date + 'T' + (b.startTime || '00:00')));
+    return list;
+  }, [therapistAppts, todayKey]);
+
+  const displaySessions = todaysSessions.length > 0 ? todaysSessions : (upcomingSessions.length > 0 ? upcomingSessions.slice(0, 5) : therapistAppts.slice(0, 5));
+  const sessionSectionTitle = todaysSessions.length > 0 ? "Today's Schedule" : "Assigned & Upcoming Sessions";
+  const sessionBadgeText = todaysSessions.length > 0 ? `${todaysSessions.length} Today` : `${upcomingSessions.length} Upcoming`;
+
+  const doctorName = currentUser?.name || currentUser?.title || 'Dr. Sarah Chen, LCSW';
   const role = currentUser?.role === 'Therapist' ? 'Licensed Clinical Social Worker (LCSW)' : 'Clinical Provider';
   const license = currentUser?.licenseNumber || 'LCSW-2022-99187';
-  const avatarInitials = currentUser?.avatar || 'TH';
+  const avatarInitials = 'SC';
 
   return (
     <div className="mc-page-container" style={{ padding: '28px 32px', minHeight: '100vh', background: 'var(--bg-main, #f8fafc)' }}>
@@ -126,8 +175,8 @@ const TherapistDashboard = () => {
       {/* ── Summary Cards ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
         {[
-          { label: 'My Clients', value: 24, subtext: 'Assigned active cases', icon: IconUsers, color: '#1e3a8a' },
-          { label: "Today's Sessions", value: 6, subtext: '2 completed, 4 upcoming', icon: IconCalendar, color: '#059669' },
+          { label: 'My Clients', value: clients.length > 0 ? clients.length : 24, subtext: 'Assigned active cases', icon: IconUsers, color: '#1e3a8a' },
+          { label: "Today / Upcoming", value: todaysSessions.length > 0 ? todaysSessions.length : upcomingSessions.length, subtext: todaysSessions.length > 0 ? `${todaysSessions.length} today` : `${upcomingSessions.length} upcoming scheduled`, icon: IconCalendar, color: '#059669' },
           { label: 'Pending Notes', value: 3, subtext: 'Documentation reminders', icon: IconClipboard, color: '#d97706', warning: true },
           { label: 'Active Plans', value: 21, subtext: 'Treatment plans active', icon: IconActivity, color: '#6366f1' },
         ].map(kpi => (
@@ -168,12 +217,12 @@ const TherapistDashboard = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, marginBottom: 24 }}>
-        {/* ── Today's Schedule ── */}
-        <SectionCard title="Today's Schedule" icon={IconCalendar} badge={{ text: '6 Sessions', bg: 'rgba(30,58,138,0.1)', color: '#1e3a8a' }}>
+        {/* ── Today's / Upcoming Schedule ── */}
+        <SectionCard title={sessionSectionTitle} icon={IconCalendar} badge={{ text: sessionBadgeText, bg: 'rgba(30,58,138,0.1)', color: '#1e3a8a' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'rgba(0,0,0,0.02)' }}>
-                <Th>Time & Duration</Th>
+                <Th>Time & Date</Th>
                 <Th>Client Name</Th>
                 <Th>Session Type</Th>
                 <Th>Status</Th>
@@ -181,29 +230,43 @@ const TherapistDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {[
-                { time: '09:00 AM', dur: '50m', name: 'Emma Johnson', type: 'Individual Therapy', status: 'Completed', tele: false },
-                { time: '11:00 AM', dur: '50m', name: 'Sofia Garcia', type: 'Telehealth', status: 'In Progress', tele: true },
-                { time: '01:30 PM', dur: '50m', name: 'David Chen', type: 'Individual Therapy', status: 'Upcoming', tele: false },
-              ].map((s, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid var(--border-primary)', opacity: s.status === 'Completed' ? 0.6 : 1 }}>
-                  <Td><span style={{ fontWeight: 700 }}>{s.time}</span> <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>({s.dur})</span></Td>
-                  <Td><span style={{ fontWeight: 600 }}>{s.name}</span></Td>
-                  <Td>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: s.tele ? '#6366f1' : '#1e3a8a', background: s.tele ? 'rgba(99,102,241,0.1)' : 'rgba(30,58,138,0.1)', padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
-                      {s.tele && <IconVideo size={11} />} {s.type}
-                    </span>
-                  </Td>
-                  <Td><Badge text={s.status} type={s.status === 'Completed' ? 'active' : s.status === 'In Progress' ? 'primary' : 'default'} /></Td>
-                  <Td>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => navigate('/clients/MC-2041')} style={{ fontSize: 11, padding: '4px 8px' }}>Open Client</button>
-                      {s.status === 'Upcoming' && <button className="mc-btn mc-btn-primary mc-btn-sm" style={{ fontSize: 11, padding: '4px 8px' }}>Start Session</button>}
-                      {s.status !== 'Upcoming' && <button className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => navigate('/session-notes/new')} style={{ fontSize: 11, padding: '4px 8px' }}>Create Note</button>}
-                    </div>
-                  </Td>
+              {displaySessions.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>
+                    No sessions scheduled. New bookings from the client portal will appear here automatically.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                displaySessions.map((s, i) => {
+                  const clientName = s.clientName && s.clientName !== 'Unknown' 
+                    ? s.clientName 
+                    : (s.participants?.[0]?.client ? `${s.participants[0].client.firstName || ''} ${s.participants[0].client.lastName || ''}`.trim() : 'Patient');
+                  const timeFormatted = s.startTime ? `${s.startTime} ${s.date ? '(' + s.date + ')' : ''}` : '09:00 AM';
+                  const isTele = !!s.telehealth || s.modality === 'TELEHEALTH';
+                  const typeLabel = s.type || s.appointmentType || 'Individual Therapy';
+                  const statusLabel = s.status || 'SCHEDULED';
+                  
+                  return (
+                    <tr key={s.id || i} style={{ borderBottom: '1px solid var(--border-primary)', opacity: statusLabel === 'COMPLETED' ? 0.6 : 1 }}>
+                      <Td><span style={{ fontWeight: 700 }}>{timeFormatted}</span></Td>
+                      <Td><span style={{ fontWeight: 600 }}>{clientName}</span></Td>
+                      <Td>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: isTele ? '#6366f1' : '#1e3a8a', background: isTele ? 'rgba(99,102,241,0.1)' : 'rgba(30,58,138,0.1)', padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
+                          {isTele && <IconVideo size={11} />} {typeLabel}
+                        </span>
+                      </Td>
+                      <Td><Badge text={statusLabel} type={statusLabel === 'COMPLETED' ? 'active' : statusLabel === 'IN_PROGRESS' ? 'primary' : statusLabel === 'CHECKED_IN' ? 'warning' : 'default'} /></Td>
+                      <Td>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => navigate('/therapist/appointments')} style={{ fontSize: 11, padding: '4px 8px' }}>Manage</button>
+                          {statusLabel === 'SCHEDULED' && <button className="mc-btn mc-btn-primary mc-btn-sm" onClick={() => navigate(`/session-notes/new?client=${encodeURIComponent(clientName)}`)} style={{ fontSize: 11, padding: '4px 8px' }}>Start Session</button>}
+                          {statusLabel === 'COMPLETED' && <button className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => navigate('/session-notes')} style={{ fontSize: 11, padding: '4px 8px' }}>View Note</button>}
+                        </div>
+                      </Td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </SectionCard>

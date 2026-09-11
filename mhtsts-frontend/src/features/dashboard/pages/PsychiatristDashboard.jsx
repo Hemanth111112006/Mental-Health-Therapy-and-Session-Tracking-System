@@ -1,7 +1,9 @@
 import { toast } from '../../../utils/toast';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../providers/AuthProvider';
+import { appointmentApi } from '../../../api/appointmentApi';
+import { clientApi } from '../../../api/clientApi';
 import { 
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip
 } from 'recharts';
@@ -17,6 +19,69 @@ const PsychiatristDashboard = () => {
   const navigate = useNavigate();
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [prescriptionForm, setPrescriptionForm] = useState({ client: '', med: '', dosage: '', instructions: '' });
+
+  const [appointments, setAppointments] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      appointmentApi.getAllAppointments().catch(() => []),
+      clientApi.getAllClients().catch(() => [])
+    ]).then(([apptData, clientData]) => {
+      if (mounted) {
+        setAppointments(Array.isArray(apptData) ? apptData : []);
+        setClients(Array.isArray(clientData) ? clientData : []);
+        setLoading(false);
+      }
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  const todayKey = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  const psychAppts = useMemo(() => {
+    return appointments.filter(a =>
+      !a.therapist ||
+      a.therapist.id === 4 ||
+      a.therapist.id === currentUser?.id ||
+      a.therapist.username === 'psychiatrist@mindcare.com' ||
+      (a.therapist.role || '').toUpperCase() === 'PSYCHIATRIST'
+    );
+  }, [appointments, currentUser]);
+
+  const todaysSessions = useMemo(() => {
+    return psychAppts.filter(a => a.date === todayKey);
+  }, [psychAppts, todayKey]);
+
+  const upcomingSessions = useMemo(() => {
+    const list = psychAppts.filter(a => (a.date || '') >= todayKey && a.status !== 'CANCELLED' && a.status !== 'COMPLETED');
+    list.sort((a, b) => new Date(a.date + 'T' + (a.startTime || '00:00')) - new Date(b.date + 'T' + (b.startTime || '00:00')));
+    return list;
+  }, [psychAppts, todayKey]);
+
+  const todaysSchedule = useMemo(() => {
+    const source = todaysSessions.length > 0 ? todaysSessions : (upcomingSessions.length > 0 ? upcomingSessions : psychAppts);
+    if (source.length === 0) {
+      return [
+        { id: 1, time: '09:00 AM', client: 'Sarah Connor', type: 'Psychiatric Evaluation', modality: 'Telehealth', status: 'COMPLETED' },
+        { id: 2, time: '10:30 AM', client: 'Morgan Davis', type: 'Medication Management', modality: 'In-Person', status: 'COMPLETED' },
+        { id: 3, time: '01:00 PM', client: 'Jennifer Miller', type: 'Medication Management', modality: 'Telehealth', status: 'IN_PROGRESS' },
+        { id: 4, time: '03:00 PM', client: 'Richard Rodriguez', type: 'Psychiatric Follow-up', modality: 'In-Person', status: 'SCHEDULED' },
+      ];
+    }
+    return source.slice(0, 5).map(s => ({
+      id: s.id,
+      time: s.startTime ? `${s.startTime}${s.date && s.date !== todayKey ? ' (' + s.date + ')' : ''}` : '10:00 AM',
+      client: s.clientName && s.clientName !== 'Unknown'
+        ? s.clientName
+        : (s.participants?.[0]?.client ? `${s.participants[0].client.firstName || ''} ${s.participants[0].client.lastName || ''}`.trim() : 'Patient'),
+      type: s.type || s.appointmentType || 'Medication Management',
+      modality: s.telehealth || s.modality === 'TELEHEALTH' ? 'Telehealth' : 'In-Person',
+      status: s.status || 'SCHEDULED'
+    }));
+  }, [todaysSessions, upcomingSessions, psychAppts, todayKey]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -34,13 +99,6 @@ const PsychiatristDashboard = () => {
     }
     return 'Dr. Mark Rivera, MD';
   };
-
-  const todaysSchedule = [
-    { id: 1, time: '09:00 AM', client: 'Sarah Connor', type: 'Psychiatric Evaluation', modality: 'Telehealth', status: 'COMPLETED' },
-    { id: 2, time: '10:30 AM', client: 'Morgan Davis', type: 'Medication Management', modality: 'In-Person', status: 'COMPLETED' },
-    { id: 3, time: '01:00 PM', client: 'Jennifer Miller', type: 'Medication Management', modality: 'Telehealth', status: 'IN_PROGRESS' },
-    { id: 4, time: '03:00 PM', client: 'Richard Rodriguez', type: 'Psychiatric Follow-up', modality: 'In-Person', status: 'SCHEDULED' },
-  ];
 
   const [refills, setRefills] = useState([
     { id: 1, client: 'Jennifer Miller', med: 'Sertraline (Zoloft)', dosage: '100mg', lastRefill: '30 days ago', requestDate: 'Yesterday' },
@@ -101,13 +159,13 @@ const PsychiatristDashboard = () => {
       <div className="mc-grid-4">
         <div className="mc-stat-card primary">
           <div className="mc-stat-card-icon"><PeopleOutlinedIcon /></div>
-          <div className="mc-stat-card-value">24</div>
+          <div className="mc-stat-card-value">{clients.length > 0 ? clients.length : 24}</div>
           <div className="mc-stat-card-label">Active Patients</div>
         </div>
         <div className="mc-stat-card success">
           <div className="mc-stat-card-icon"><EventAvailableOutlinedIcon /></div>
-          <div className="mc-stat-card-value">4</div>
-          <div className="mc-stat-card-label">Today's Appointments</div>
+          <div className="mc-stat-card-value">{todaysSessions.length > 0 ? todaysSessions.length : upcomingSessions.length}</div>
+          <div className="mc-stat-card-label">{todaysSessions.length > 0 ? "Today's Appointments" : "Upcoming Sessions"}</div>
         </div>
         <div className="mc-stat-card warning">
           <div className="mc-stat-card-icon"><LocalHospitalOutlinedIcon /></div>

@@ -28,9 +28,13 @@ const PsychologistAppointmentsPage = () => {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      setError(null);
       const data = await appointmentApi.getAllAppointments();
-      setAppointments(data);
+      const sorted = Array.isArray(data) ? [...data].sort((a, b) => {
+        const dateA = new Date((a.date || '') + 'T' + (a.startTime || '00:00'));
+        const dateB = new Date((b.date || '') + 'T' + (b.startTime || '00:00'));
+        return dateB - dateA;
+      }) : [];
+      setAppointments(sorted);
     } catch (err) {
       setError('Failed to load appointments.');
     } finally {

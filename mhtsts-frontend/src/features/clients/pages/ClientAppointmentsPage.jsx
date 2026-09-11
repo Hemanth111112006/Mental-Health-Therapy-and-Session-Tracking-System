@@ -63,7 +63,7 @@ const ClientAppointmentsPage = () => {
   const [requestForm, setRequestForm] = useState({
     providerId: 2,
     type: 'INDIVIDUAL_THERAPY',
-    date: getTomorrowDate(),
+    date: getTodayDate(),
     startTime: '09:00:00',
     telehealth: true,
     notes: ''
@@ -116,7 +116,12 @@ const ClientAppointmentsPage = () => {
       setLoading(true);
       setError(null);
       const allAppts = await appointmentApi.getAllAppointments();
-      setAppointments(allAppts);
+      const sorted = Array.isArray(allAppts) ? [...allAppts].sort((a, b) => {
+        const dateA = new Date((a.date || '') + 'T' + (a.startTime || '00:00'));
+        const dateB = new Date((b.date || '') + 'T' + (b.startTime || '00:00'));
+        return dateB - dateA;
+      }) : [];
+      setAppointments(sorted);
     } catch (err) {
       setError('Failed to load appointments. Please try again.');
       console.error('Appointments fetch error:', err);
@@ -160,12 +165,14 @@ const ClientAppointmentsPage = () => {
       };
 
       await appointmentApi.scheduleAppointment(payload);
-      toast.success('Appointment scheduled successfully! Your session is confirmed.');
+      const selectedProvider = providers.find(p => String(p.id) === String(requestForm.providerId));
+      const providerDisplayName = selectedProvider ? selectedProvider.name : 'your doctor';
+      toast.success(`Appointment confirmed with ${providerDisplayName} on ${requestForm.date} at ${startTimeFormatted}! Sent to doctor's schedule.`);
       setShowRequestModal(false);
       setRequestForm({
         providerId: 2,
         type: 'INDIVIDUAL_THERAPY',
-        date: getTomorrowDate(),
+        date: getTodayDate(),
         startTime: '09:00:00',
         telehealth: true,
         notes: ''

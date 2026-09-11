@@ -155,9 +155,12 @@ const PsychiatristCalendarPage = () => {
         };
       });
 
-      // Filter out duplicate appointments on today's date
-      const nonToday = normalizedBackend.filter(a => a.date !== todayKey);
-      setAppointments([...PSYCHIATRIST_SEEDED_APPOINTMENTS, ...nonToday]);
+      // Use live backend appointments if available
+      if (normalizedBackend.length > 0) {
+        setAppointments(normalizedBackend);
+      } else {
+        setAppointments(PSYCHIATRIST_SEEDED_APPOINTMENTS);
+      }
     } catch {
       setAppointments(PSYCHIATRIST_SEEDED_APPOINTMENTS);
     } finally {
