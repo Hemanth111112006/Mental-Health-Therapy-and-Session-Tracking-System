@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="Software Testing Automated Suite" verbose="1">
+    
+    <test name="Unit &amp; Boundary Value Analysis Tests">
+        <classes>
+            <class name="com.testing.unit.CalculatorTest" />
+        </classes>
+    </test>
+
+    <test name="API Endpoint Tests">
+        <classes>
+            <class name="com.testing.api.MindCareApiTest" />
+        </classes>
+    </test>
+
+    <test name="Selenium Web UI Automation Tests">
+        <classes>
+            <class name="com.testing.selenium.LoginAutomationTest" />
+        </classes>
+    </test>
+
+</suite>

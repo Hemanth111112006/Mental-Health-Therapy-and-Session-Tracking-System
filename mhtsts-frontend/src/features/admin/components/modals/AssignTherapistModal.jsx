@@ -1,0 +1,12 @@
+import React from 'react';
+
+const AssignTherapistModal = () => {
+  return (
+    <div className="p-4 border rounded shadow-sm bg-white">
+      <h2 className="text-xl font-bold">AssignTherapistModal Component</h2>
+      <p className="text-gray-600">Placeholder for AssignTherapistModal</p>
+    </div>
+  );
+};
+
+export default AssignTherapistModal;

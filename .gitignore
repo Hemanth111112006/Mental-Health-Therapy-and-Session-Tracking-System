@@ -1,0 +1,61 @@
+# ==============================================================================
+# MHTSTS Root .gitignore
+# ==============================================================================
+
+# Node / Frontend dependencies & builds
+node_modules/
+dist/
+build/
+.pnp
+.pnp.js
+coverage/
+.vite/
+
+# Java / Maven build outputs
+target/
+out/
+*.class
+*.jar
+*.war
+*.ear
+test-output/
+surefire/
+surefire-reports/
+
+# Environment variables, secrets, and private configs
+.env
+.env.*
+*.env
+application-local.properties
+application-prod.properties
+application-secret.properties
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Operating system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

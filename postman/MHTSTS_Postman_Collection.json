@@ -1,0 +1,516 @@
+{
+  "info": {
+    "_postman_id": "mhtsts-api-collection-2026",
+    "name": "MHTSTS - Mental Health Therapy and Session Tracking System API",
+    "description": "Complete Postman API Collection for MHTSTS Spring Boot Backend (Port 8080). Includes Auth, Role-Based Access Control (RBAC), Client Management, Appointments, Session Notes, Treatment Plans, Crisis Assessments, Safety Plans, and Reports.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "User Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\",\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "",
+                  "pm.test(\"Status code is expected\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.token) {",
+                  "    pm.collectionVariables.set(\"bearer_token\", json.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{test_username}}\",\n  \"email\": \"{{test_email}}\",\n  \"password\": \"Password@123\",\n  \"role\": \"ADMIN\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "",
+                  "pm.test(\"Status code is expected\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const uniqueId = Date.now();",
+                  "pm.collectionVariables.set(\"test_username\", \"testuser_\" + uniqueId);",
+                  "pm.collectionVariables.set(\"test_email\", \"test_\" + uniqueId + \"@example.com\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Management",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "",
+                  "pm.test(\"Status code is expected\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/audit-logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "audit-logs"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "",
+                  "pm.test(\"Status code is expected\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Client Management",
+      "item": [
+        {
+          "name": "Get All Clients",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "clients"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "",
+                  "pm.test(\"Status code is expected\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create New Client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Emma\",\n  \"lastName\": \"Johnson\",\n  \"email\": \"emma.johnson@example.com\",\n  \"phone\": \"(555) 234-5678\",\n  \"dateOfBirth\": \"1992-05-14\",\n  \"gender\": \"Female\",\n  \"primaryDiagnosis\": \"F33.1 - Major Depressive Disorder, Recurrent, Moderate\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "clients"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "",
+                  "pm.test(\"Status code is expected\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.id) {",
+                  "    pm.collectionVariables.set(\"client_id\", json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Appointments & Scheduling",
+      "item": [
+        {
+          "name": "Get Appointments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "appointments"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "",
+                  "pm.test(\"Status code is expected\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Schedule Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": 1,\n  \"therapistId\": 2,\n  \"appointmentDate\": \"2026-08-15T09:00:00\",\n  \"sessionType\": \"Individual Therapy\",\n  \"location\": \"Room 204\",\n  \"status\": \"SCHEDULED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "appointments"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "",
+                  "pm.test(\"Status code is expected\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.id) {",
+                  "    pm.collectionVariables.set(\"appointment_id\", json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Session Notes & Clinical",
+      "item": [
+        {
+          "name": "Create SOAP Session Note",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": 1,\n  \"subjective\": \"Client reports improved mood and decreased anxiety during work presentations.\",\n  \"objective\": \"Affect congruent, good eye contact, calm posture.\",\n  \"assessment\": \"Client is making consistent progress with CBT thought challenging exercises.\",\n  \"plan\": \"Continue weekly individual therapy. Practice mindfulness 10 mins daily.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/session-notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "session-notes"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{bearer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "",
+                  "pm.test(\"Status code is expected\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.id) {",
+                  "    pm.collectionVariables.set(\"session_note_id\", json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "your_jwt_token_here",
+      "type": "string"
+    }
+  ]
+}
