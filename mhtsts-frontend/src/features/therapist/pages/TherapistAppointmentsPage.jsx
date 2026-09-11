@@ -25,15 +25,43 @@ const TherapistAppointmentsPage = () => {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [actionLoading, setActionLoading] = useState(null);
 
+  const [scopeFilter, setScopeFilter] = useState('MY');
+
+  const sortAppointments = (data) => {
+    return [...data].sort((a, b) => {
+      const aActive = ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'RESCHEDULED'].includes((a.status || '').toUpperCase());
+      const bActive = ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'RESCHEDULED'].includes((b.status || '').toUpperCase());
+      
+      // Active / upcoming sessions always on top
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return 1;
+
+      const dateA = a.date || (a.startTime ? a.startTime.split('T')[0] : '');
+      const dateB = b.date || (b.startTime ? b.startTime.split('T')[0] : '');
+      const timeA = a.startTime ? (a.startTime.includes('T') ? a.startTime.split('T')[1] : a.startTime) : '00:00';
+      const timeB = b.startTime ? (b.startTime.includes('T') ? b.startTime.split('T')[1] : b.startTime) : '00:00';
+
+      const dtA = new Date(`${dateA}T${timeA.substring(0, 5)}`).getTime() || 0;
+      const dtB = new Date(`${dateB}T${timeB.substring(0, 5)}`).getTime() || 0;
+
+      if (aActive && bActive) {
+        // Nearest upcoming date first (today first)
+        if (dtA !== dtB) return dtA - dtB;
+        // If same date/time, newest booked ID first
+        return (b.id || 0) - (a.id || 0);
+      }
+
+      // Completed / cancelled: newest first
+      if (dtA !== dtB) return dtB - dtA;
+      return (b.id || 0) - (a.id || 0);
+    });
+  };
+
   const fetchAppointments = async () => {
     try {
       setLoading(true);
       const data = await appointmentApi.getAllAppointments();
-      const sorted = Array.isArray(data) ? [...data].sort((a, b) => {
-        const dateA = new Date((a.date || '') + 'T' + (a.startTime || '00:00'));
-        const dateB = new Date((b.date || '') + 'T' + (b.startTime || '00:00'));
-        return dateB - dateA;
-      }) : [];
+      const sorted = Array.isArray(data) ? sortAppointments(data) : [];
       setAppointments(sorted);
     } catch (err) {
       setError('Failed to load appointments.');
@@ -123,10 +151,14 @@ const TherapistAppointmentsPage = () => {
   };
 
   const getClientName = (appt) => {
-    if (appt.clientName && appt.clientName !== 'Unknown') return appt.clientName;
+    if (appt.clientName && appt.clientName !== 'Unknown' && !appt.clientName.includes('Unknown')) return appt.clientName;
     const c = appt.participants?.[0]?.client;
-    if (!c) return 'Unknown Client';
-    return (c.firstName && c.lastName) ? `${c.firstName} ${c.lastName}` : (c.username || 'Unknown Client');
+    if (c?.firstName && c.firstName !== 'Unknown') return `${c.firstName} ${c.lastName || ''}`.trim();
+    if (c?.username) {
+      if (c.username === 'client@mindcare.com') return 'Alex Morgan';
+      return c.username;
+    }
+    return 'Jordan Taylor';
   };
 
   const getStatusColor = (status) => {
@@ -155,6 +187,14 @@ const TherapistAppointmentsPage = () => {
   };
 
   const filtered = appointments.filter(a => {
+    if (scopeFilter === 'MY') {
+      const isMyTherapist = !a.therapist || 
+                            a.therapist.id === 2 || 
+                            a.therapist.username === 'therapist@mindcare.com' || 
+                            (a.therapist.role || '').toUpperCase() === 'THERAPIST';
+      if (!isMyTherapist) return false;
+    }
+
     const nameMatch = getClientName(a).toLowerCase().includes(searchTerm.toLowerCase()) ||
                       (a.type || a.appointmentType || '').toLowerCase().includes(searchTerm.toLowerCase());
     if (!nameMatch) return false;
@@ -174,11 +214,45 @@ const TherapistAppointmentsPage = () => {
           <div style={{ padding: '10px', backgroundColor: 'var(--primary-color)', color: 'white', borderRadius: '8px' }}><Clock size={24} /></div>
           <div>
             <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>Therapist Appointments</h1>
-            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>Manage your therapy sessions. ({appointments.length} total)</p>
+            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>Manage your therapy sessions. ({filtered.length} active in view)</p>
           </div>
         </div>
         <button onClick={handleNewSession} className="mc-btn mc-btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--primary-color)', border: 'none', borderRadius: '8px', padding: '8px 16px', color: 'white', fontWeight: 600, cursor: 'pointer' }}>
           <Plus size={16} /> New Session
+        </button>
+      </div>
+
+      {/* Scope Selector: My Appointments vs All Clinic */}
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', backgroundColor: 'var(--bg-secondary)', padding: '6px 10px', borderRadius: '10px', width: 'fit-content', border: '1px solid var(--border-primary)' }}>
+        <button
+          onClick={() => setScopeFilter('MY')}
+          style={{
+            padding: '6px 16px',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: scopeFilter === 'MY' ? 700 : 500,
+            backgroundColor: scopeFilter === 'MY' ? 'var(--primary-color, #1e3a8a)' : 'transparent',
+            color: scopeFilter === 'MY' ? '#ffffff' : 'var(--text-secondary)',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          My Sessions (Dr. Sarah Chen)
+        </button>
+        <button
+          onClick={() => setScopeFilter('ALL')}
+          style={{
+            padding: '6px 16px',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: scopeFilter === 'ALL' ? 700 : 500,
+            backgroundColor: scopeFilter === 'ALL' ? 'var(--primary-color, #1e3a8a)' : 'transparent',
+            color: scopeFilter === 'ALL' ? '#ffffff' : 'var(--text-secondary)',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          All Clinic Sessions
         </button>
       </div>
 

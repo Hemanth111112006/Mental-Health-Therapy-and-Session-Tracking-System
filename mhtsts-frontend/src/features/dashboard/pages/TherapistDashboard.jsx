@@ -131,7 +131,8 @@ const TherapistDashboard = () => {
   }, [appointments, currentUser]);
 
   const todaysSessions = useMemo(() => {
-    return therapistAppts.filter(a => a.date === todayKey);
+    const list = therapistAppts.filter(a => a.date === todayKey);
+    return list.sort((a, b) => (b.id || 0) - (a.id || 0));
   }, [therapistAppts, todayKey]);
 
   const upcomingSessions = useMemo(() => {

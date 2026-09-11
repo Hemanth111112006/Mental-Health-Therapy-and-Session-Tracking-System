@@ -140,11 +140,29 @@ const PsychiatristAppointmentsPage = () => {
         }
       }
 
-      // Sort backend appointments: newest/upcoming first
+      // Sort backend appointments: upcoming first, newest booking first
       const sortedBackend = [...uniqueBackend].sort((a, b) => {
-        const dateA = new Date((a.date || '') + 'T' + (a.startTime || '00:00'));
-        const dateB = new Date((b.date || '') + 'T' + (b.startTime || '00:00'));
-        return dateB - dateA;
+        const aActive = ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'RESCHEDULED'].includes((a.status || '').toUpperCase());
+        const bActive = ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'RESCHEDULED'].includes((b.status || '').toUpperCase());
+        
+        if (aActive && !bActive) return -1;
+        if (!aActive && bActive) return 1;
+
+        const dateA = a.date || (a.startTime ? a.startTime.split('T')[0] : '');
+        const dateB = b.date || (b.startTime ? b.startTime.split('T')[0] : '');
+        const timeA = a.startTime ? (a.startTime.includes('T') ? a.startTime.split('T')[1] : a.startTime) : '00:00';
+        const timeB = b.startTime ? (b.startTime.includes('T') ? b.startTime.split('T')[1] : b.startTime) : '00:00';
+
+        const dtA = new Date(`${dateA}T${timeA.substring(0, 5)}`).getTime() || 0;
+        const dtB = new Date(`${dateB}T${timeB.substring(0, 5)}`).getTime() || 0;
+
+        if (aActive && bActive) {
+          if (dtA !== dtB) return dtA - dtB;
+          return (b.id || 0) - (a.id || 0);
+        }
+
+        if (dtA !== dtB) return dtB - dtA;
+        return (b.id || 0) - (a.id || 0);
       });
 
       // Prioritize appointments for psychiatrist, or display all incoming bookings
