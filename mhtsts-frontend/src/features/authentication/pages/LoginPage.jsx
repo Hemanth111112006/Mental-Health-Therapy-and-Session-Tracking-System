@@ -255,6 +255,7 @@ const LoginPage = () => {
       tenantBadge: "Google Cloud Healthcare API · Verified",
       icon: <GoogleIcon />,
       accentColor: "#4285F4",
+      officialUrl: "https://accounts.google.com",
       accounts: googleSSOAccounts,
     },
     microsoft: {
@@ -263,6 +264,7 @@ const LoginPage = () => {
       tenantBadge: "Microsoft Cloud for Healthcare · Verified",
       icon: <MicrosoftIcon />,
       accentColor: "#0078D4",
+      officialUrl: "https://login.microsoftonline.com",
       accounts: microsoftSSOAccounts,
     },
     apple: {
@@ -271,6 +273,7 @@ const LoginPage = () => {
       tenantBadge: "HIPAA Compliant Patient Gateway",
       icon: <AppleIcon />,
       accentColor: "#111827",
+      officialUrl: "https://appleid.apple.com",
       accounts: appleSSOAccounts,
     },
   };
@@ -342,6 +345,28 @@ const LoginPage = () => {
     } finally {
       setSsoLoading(false);
       setSsoLoadingText("");
+    }
+  };
+
+  const handleSocialClick = (provider) => {
+    const officialUrls = {
+      google: "https://accounts.google.com",
+      microsoft: "https://login.microsoftonline.com",
+      apple: "https://appleid.apple.com",
+    };
+    const names = {
+      google: "Google",
+      microsoft: "Microsoft",
+      apple: "Apple",
+    };
+    const url = officialUrls[provider];
+    if (url) {
+      addToast(
+        "info",
+        `Official ${names[provider]} Portal`,
+        `Opening official ${names[provider]} website in a new tab...`
+      );
+      window.open(url, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -617,8 +642,8 @@ const LoginPage = () => {
                 type="button"
                 className="mc-luxury-btn-social"
                 style={{ flex: 1, height: 38, gap: 4, fontSize: 11 }}
-                onClick={() => setSsoProvider("google")}
-                title="Sign in with Google Workspace for Healthcare"
+                onClick={() => handleSocialClick("google")}
+                title="Open official Google Sign-In website (accounts.google.com)"
               >
                 <GoogleIcon /> Google
               </button>
@@ -626,8 +651,8 @@ const LoginPage = () => {
                 type="button"
                 className="mc-luxury-btn-social"
                 style={{ flex: 1, height: 38, gap: 4, fontSize: 11 }}
-                onClick={() => setSsoProvider("microsoft")}
-                title="Sign in with Microsoft Entra ID / Office 365"
+                onClick={() => handleSocialClick("microsoft")}
+                title="Open official Microsoft Sign-In website (login.microsoftonline.com)"
               >
                 <MicrosoftIcon /> Microsoft
               </button>
@@ -635,8 +660,8 @@ const LoginPage = () => {
                 type="button"
                 className="mc-luxury-btn-social"
                 style={{ flex: 1, height: 38, gap: 4, fontSize: 11 }}
-                onClick={() => setSsoProvider("apple")}
-                title="Sign in with Apple ID Patient Gateway"
+                onClick={() => handleSocialClick("apple")}
+                title="Open official Apple ID website (appleid.apple.com)"
               >
                 <AppleIcon /> Apple
               </button>
@@ -1021,19 +1046,42 @@ const LoginPage = () => {
                 <ShieldOutlinedIcon style={{ fontSize: 13, color: "#4338CA" }} />
                 {ssoConfigs[ssoProvider].tenantBadge}
               </span>
-              <span
-                style={{
-                  fontSize: 9,
-                  fontWeight: 600,
-                  color: "#059669",
-                  background: "#ECFDF5",
-                  padding: "2px 8px",
-                  borderRadius: 9999,
-                  border: "1px solid #A7F3D0",
-                }}
-              >
-                Ready for SSO
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <a
+                  href={ssoConfigs[ssoProvider].officialUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: "#1E40AF",
+                    background: "#EFF6FF",
+                    padding: "3px 8px",
+                    borderRadius: 6,
+                    border: "1px solid #BFDBFE",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                  title={`Open official ${ssoConfigs[ssoProvider].provider} login`}
+                >
+                  🌐 Official Web &rarr;
+                </a>
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 600,
+                    color: "#059669",
+                    background: "#ECFDF5",
+                    padding: "2px 8px",
+                    borderRadius: 9999,
+                    border: "1px solid #A7F3D0",
+                  }}
+                >
+                  Ready for SSO
+                </span>
+              </div>
             </div>
 
             {/* Body / Account List */}

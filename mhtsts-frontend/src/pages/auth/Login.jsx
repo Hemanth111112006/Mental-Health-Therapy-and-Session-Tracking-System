@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../providers/AuthProvider';
 import { Shield, Lock, Mail, Eye, EyeOff, Activity, CheckCircle, HelpCircle } from 'lucide-react';
@@ -231,9 +231,9 @@ const Login = () => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', marginBottom: '1.5rem' }}>
-            <button type="button" style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>Google</button>
-            <button type="button" style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>Microsoft</button>
-            <button type="button" style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>Apple</button>
+            <button type="button" onClick={() => window.open('https://accounts.google.com', '_blank', 'noopener,noreferrer')} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>Google</button>
+            <button type="button" onClick={() => window.open('https://login.microsoftonline.com', '_blank', 'noopener,noreferrer')} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>Microsoft</button>
+            <button type="button" onClick={() => window.open('https://appleid.apple.com', '_blank', 'noopener,noreferrer')} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>Apple</button>
           </div>
 
           {/* Footer Badges & Links */}
