@@ -252,13 +252,23 @@ const TherapistDashboard = () => {
                       <Td><span style={{ fontWeight: 700 }}>{timeFormatted}</span></Td>
                       <Td><span style={{ fontWeight: 600 }}>{clientName}</span></Td>
                       <Td>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: isTele ? '#6366f1' : '#1e3a8a', background: isTele ? 'rgba(99,102,241,0.1)' : 'rgba(30,58,138,0.1)', padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
-                          {isTele && <IconVideo size={11} />} {typeLabel}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: isTele ? '#1d4ed8' : '#15803d', background: isTele ? 'rgba(37,99,235,0.1)' : 'rgba(21,128,61,0.1)', padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
+                          {isTele ? <IconVideo size={11} color="#1d4ed8" /> : null} {isTele ? 'Online · ' : 'Clinic · '}{typeLabel}
                         </span>
                       </Td>
                       <Td><Badge text={statusLabel} type={statusLabel === 'COMPLETED' ? 'active' : statusLabel === 'IN_PROGRESS' ? 'primary' : statusLabel === 'CHECKED_IN' ? 'warning' : 'default'} /></Td>
                       <Td>
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {isTele && statusLabel !== 'COMPLETED' && statusLabel !== 'CANCELLED' && (
+                            <button 
+                              className="mc-btn mc-btn-primary mc-btn-sm" 
+                              onClick={() => navigate(`/telehealth/${s.id || 1}`)} 
+                              style={{ fontSize: 11, padding: '4px 10px', backgroundColor: '#2563EB', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 600, border: 'none' }}
+                              title="Join Live Video Therapy Session"
+                            >
+                              <IconVideo size={12} color="#fff" /> Join Therapy
+                            </button>
+                          )}
                           <button className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => navigate('/therapist/appointments')} style={{ fontSize: 11, padding: '4px 8px' }}>Manage</button>
                           {statusLabel === 'SCHEDULED' && <button className="mc-btn mc-btn-primary mc-btn-sm" onClick={() => navigate(`/session-notes/new?client=${encodeURIComponent(clientName)}`)} style={{ fontSize: 11, padding: '4px 8px' }}>Start Session</button>}
                           {statusLabel === 'COMPLETED' && <button className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => navigate('/session-notes')} style={{ fontSize: 11, padding: '4px 8px' }}>View Note</button>}

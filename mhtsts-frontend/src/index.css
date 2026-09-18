@@ -60,6 +60,7 @@
   --bg-sidebar-active: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
   --bg-topbar: #FFFFFF;
   --bg-card: #FFFFFF;
+  --card-bg: #FFFFFF;
   --bg-modal-overlay: rgba(0, 0, 0, 0.5);
 
   /* ─ Text Colors ─ */
@@ -170,6 +171,7 @@
   --bg-sidebar-active: linear-gradient(135deg, #2563EB 0%, #60A5FA 100%);
   --bg-topbar: #0F172A;
   --bg-card: #1E293B;
+  --card-bg: #1E293B;
   --bg-modal-overlay: rgba(0, 0, 0, 0.7);
 
   --color-primary: #60A5FA;

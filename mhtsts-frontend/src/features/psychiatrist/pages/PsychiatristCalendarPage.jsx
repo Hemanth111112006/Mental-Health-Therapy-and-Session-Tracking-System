@@ -508,15 +508,12 @@ const PsychiatristCalendarPage = () => {
 
                         {/* Action buttons */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {appt.telehealth && (
+                          {(appt.telehealth || appt.modality === 'TELEHEALTH') && (
                             <button 
-                              onClick={() => {
-                                toast.info(`Connecting to telehealth consultation with ${clientName}...`);
-                                navigate('/telehealth');
-                              }}
-                              style={{ padding: '7px 12px', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                              onClick={() => navigate(`/telehealth/${appt.id || 1}`)}
+                              style={{ padding: '7px 12px', backgroundColor: '#2563EB', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                             >
-                              <Video size={14} /> Join Call
+                              <Video size={14} /> Join Therapy
                             </button>
                           )}
                           {isCheckedIn && (

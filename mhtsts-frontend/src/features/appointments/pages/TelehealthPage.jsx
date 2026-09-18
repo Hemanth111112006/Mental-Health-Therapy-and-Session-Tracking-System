@@ -20,7 +20,9 @@ import {
   Send,
   X,
   ArrowLeft,
-  Volume2
+  Volume2,
+  Camera,
+  RefreshCw
 } from 'lucide-react';
 
 const TelehealthPage = () => {
@@ -38,9 +40,177 @@ const TelehealthPage = () => {
   const [hasRemoteJoined, setHasRemoteJoined] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(true);
 
+  // View state: swap self-view to main stage
+  const [isLocalMainView, setIsLocalMainView] = useState(false);
+
+  // Live media streams (Camera & Screen Share)
+  const [cameraStreamActive, setCameraStreamActive] = useState(false);
+  const [cameraError, setCameraError] = useState(null);
+  const localVideoRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const screenVideoRef = useRef(null);
+  const screenStreamRef = useRef(null);
+
   // Call duration timer (starts with realistic elapsed time)
   const [secondsElapsed, setSecondsElapsed] = useState(145);
   const containerRef = useRef(null);
+
+  // Callback ref to attach stream immediately as soon as video DOM node mounts
+  const handleLocalVideoRef = (el) => {
+    localVideoRef.current = el;
+    if (el && localStreamRef.current) {
+      if (el.srcObject !== localStreamRef.current) {
+        el.srcObject = localStreamRef.current;
+      }
+      el.play().catch(() => {});
+    }
+  };
+
+  const handleScreenVideoRef = (el) => {
+    screenVideoRef.current = el;
+    if (el && screenStreamRef.current) {
+      if (el.srcObject !== screenStreamRef.current) {
+        el.srcObject = screenStreamRef.current;
+      }
+      el.play().catch(() => {});
+    }
+  };
+
+  // Start real webcam stream
+  const startCamera = async () => {
+    setCameraError(null);
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const msg = 'Camera API not supported in this browser.';
+        setCameraError(msg);
+        toast.error(msg);
+        return false;
+      }
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+          audio: false
+        });
+      } catch (e1) {
+        // Fallback constraint if ideal/facingMode is not supported on desktop
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+      }
+
+      localStreamRef.current = stream;
+      setCameraStreamActive(true);
+      setIsVideoOn(true);
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch(() => {});
+      }
+      return true;
+    } catch (err) {
+      console.warn('Camera access unavailable or not granted:', err);
+      let errMsg = 'Camera access unavailable.';
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errMsg = 'Permission blocked. Click the camera/lock icon in your address bar to allow.';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errMsg = 'No webcam device found on your device.';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errMsg = 'Webcam is in use by another application (e.g. Zoom, Teams).';
+      }
+      setCameraError(errMsg);
+      setCameraStreamActive(false);
+      return false;
+    }
+  };
+
+  // Stop camera tracks
+  const stopCamera = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
+    }
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
+    setCameraStreamActive(false);
+  };
+
+  // Toggle Video Camera
+  const handleToggleVideo = async () => {
+    if (isVideoOn && cameraStreamActive) {
+      stopCamera();
+      setIsVideoOn(false);
+      toast.info('Camera turned off');
+    } else {
+      setIsVideoOn(true);
+      const ok = await startCamera();
+      if (ok) {
+        toast.success('Camera connected & streaming');
+      } else {
+        toast.info('Requesting camera access...');
+      }
+    }
+  };
+
+  // Toggle Screen Sharing via getDisplayMedia
+  const handleToggleScreenShare = async () => {
+    if (!isScreenSharing) {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+          const stream = await navigator.mediaDevices.getDisplayMedia({
+            video: { cursor: 'always' },
+            audio: false
+          });
+          screenStreamRef.current = stream;
+          setIsScreenSharing(true);
+          toast.success('Screen sharing active — presenting to consultation room');
+
+          // Browser native "Stop Sharing" button listener
+          const track = stream.getVideoTracks()[0];
+          if (track) {
+            track.onended = () => {
+              stopScreenShare();
+            };
+          }
+
+          setTimeout(() => {
+            if (screenVideoRef.current) {
+              screenVideoRef.current.srcObject = stream;
+            }
+          }, 150);
+        } else {
+          setIsScreenSharing(true);
+          toast.info('Presenting shared clinical workspace');
+        }
+      } catch (err) {
+        if (err.name === 'NotAllowedError') {
+          toast.info('Screen share canceled');
+        } else {
+          console.warn('DisplayMedia error:', err);
+          setIsScreenSharing(true);
+          toast.info('Presenting shared clinical workspace');
+        }
+      }
+    } else {
+      stopScreenShare();
+    }
+  };
+
+  // Stop screen sharing
+  const stopScreenShare = () => {
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach(track => track.stop());
+      screenStreamRef.current = null;
+    }
+    if (screenVideoRef.current) {
+      screenVideoRef.current.srcObject = null;
+    }
+    setIsScreenSharing(false);
+    toast.info('Screen sharing stopped');
+  };
 
   // In-call chat
   const [messages, setMessages] = useState([
@@ -176,6 +346,86 @@ const TelehealthPage = () => {
     }
   }, [messages, isChatOpen]);
 
+  // Auto-start webcam on mount
+  useEffect(() => {
+    let active = true;
+
+    const autoStart = async () => {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          let stream;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+              audio: false
+            });
+          } catch (e1) {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: false
+            });
+          }
+          if (!active) {
+            stream.getTracks().forEach(t => t.stop());
+            return;
+          }
+          localStreamRef.current = stream;
+          setCameraStreamActive(true);
+          setIsVideoOn(true);
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = stream;
+            localVideoRef.current.play().catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.warn('Auto camera request:', err);
+        if (active) {
+          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            setCameraError('Permission needed: Click address bar camera icon or "Start Camera" below.');
+          }
+        }
+      }
+    };
+
+    autoStart();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Attach camera stream to local video element whenever active or view mode swaps
+  useEffect(() => {
+    if (cameraStreamActive && localStreamRef.current && localVideoRef.current) {
+      if (localVideoRef.current.srcObject !== localStreamRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+      }
+      localVideoRef.current.play().catch(() => {});
+    }
+  }, [cameraStreamActive, isVideoOn, isLocalMainView]);
+
+  // Attach screen share stream to screen video element
+  useEffect(() => {
+    if (isScreenSharing && screenStreamRef.current && screenVideoRef.current) {
+      if (screenVideoRef.current.srcObject !== screenStreamRef.current) {
+        screenVideoRef.current.srcObject = screenStreamRef.current;
+      }
+      screenVideoRef.current.play().catch(() => {});
+    }
+  }, [isScreenSharing]);
+
+  // Clean up all media tracks on unmount
+  useEffect(() => {
+    return () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
   const formatTimer = (totalSec) => {
     const mins = Math.floor(totalSec / 60);
     const secs = totalSec % 60;
@@ -229,6 +479,8 @@ const TelehealthPage = () => {
   };
 
   const handleConfirmLeave = () => {
+    stopCamera();
+    stopScreenShare();
     setShowEndModal(false);
     toast.success('Telehealth consultation concluded. Session log securely filed.');
     if (isClient) {
@@ -420,7 +672,7 @@ const TelehealthPage = () => {
               style={{
                 width: '100%',
                 height: '100%',
-                backgroundColor: '#1E293B',
+                backgroundColor: '#0F172A',
                 borderRadius: '12px',
                 border: '2px solid #38BDF8',
                 display: 'flex',
@@ -432,71 +684,242 @@ const TelehealthPage = () => {
               <div
                 style={{
                   padding: '10px 16px',
-                  backgroundColor: '#0F172A',
+                  backgroundColor: '#0B0F19',
                   borderBottom: '1px solid rgba(255,255,255,0.1)',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  zIndex: 10
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38BDF8', fontSize: '13px', fontWeight: 600 }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#38BDF8', display: 'inline-block' }} />
                   <Share2 size={16} />
-                  <span>Presenter Screen: CBT Cognitive Restructuring & Thought Record Worksheet</span>
+                  <span>
+                    {screenStreamRef.current
+                      ? 'Live Screen Presentation: You are sharing your screen with the consultation room'
+                      : 'Presenter Screen: CBT Cognitive Restructuring & Thought Record Worksheet'}
+                  </span>
                 </div>
                 <button
-                  onClick={() => setIsScreenSharing(false)}
+                  onClick={stopScreenShare}
                   style={{
-                    padding: '4px 10px',
+                    padding: '6px 14px',
                     backgroundColor: 'rgba(239, 68, 68, 0.2)',
                     border: '1px solid rgba(239, 68, 68, 0.4)',
                     color: '#F87171',
                     borderRadius: '6px',
                     fontSize: '12px',
                     fontWeight: 600,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.15s ease'
                   }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.3)'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)'}
                 >
-                  Stop Sharing
+                  <X size={14} /> Stop Sharing
                 </button>
               </div>
 
-              <div style={{ flex: 1, padding: '24px', overflowY: 'auto', backgroundColor: '#F8FAFC', color: '#0F172A' }}>
-                <div style={{ maxWidth: '800px', margin: '0 auto', backgroundColor: '#FFFFFF', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #0284C7', paddingBottom: '12px', marginBottom: '20px' }}>
-                    <div>
-                      <h3 style={{ margin: 0, color: '#0284C7', fontSize: '18px' }}>MindCare Clinical Worksheet: 7-Column Thought Record</h3>
-                      <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748B' }}>Patient: {appointment?.client?.name} • Clinician: {appointment?.therapist?.name}</p>
+              {screenStreamRef.current ? (
+                <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#020617' }}>
+                  <video
+                    ref={screenVideoRef}
+                    autoPlay
+                    playsInline
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      backgroundColor: '#000000'
+                    }}
+                  />
+                </div>
+              ) : (
+                <div style={{ flex: 1, padding: '24px', overflowY: 'auto', backgroundColor: '#F8FAFC', color: '#0F172A' }}>
+                  <div style={{ maxWidth: '800px', margin: '0 auto', backgroundColor: '#FFFFFF', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #0284C7', paddingBottom: '12px', marginBottom: '20px' }}>
+                      <div>
+                        <h3 style={{ margin: 0, color: '#0284C7', fontSize: '18px' }}>MindCare Clinical Worksheet: 7-Column Thought Record</h3>
+                        <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748B' }}>Patient: {appointment?.client?.name} • Clinician: {appointment?.therapist?.name}</p>
+                      </div>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#059669', backgroundColor: '#ECFDF5', padding: '4px 10px', borderRadius: '4px', height: 'fit-content' }}>Active Exercise</span>
                     </div>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#059669', backgroundColor: '#ECFDF5', padding: '4px 10px', borderRadius: '4px', height: 'fit-content' }}>Active Exercise</span>
-                  </div>
 
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#F1F5F9', borderBottom: '1px solid #CBD5E1' }}>
-                        <th style={{ padding: '8px', textAlign: 'left' }}>1. Situation</th>
-                        <th style={{ padding: '8px', textAlign: 'left' }}>2. Automatic Thought</th>
-                        <th style={{ padding: '8px', textAlign: 'left' }}>3. Emotion / Rating</th>
-                        <th style={{ padding: '8px', textAlign: 'left' }}>4. Evidence Supporting</th>
-                        <th style={{ padding: '8px', textAlign: 'left' }}>5. Alternative Thought</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
-                        <td style={{ padding: '10px 8px' }}>Preparing for Monday team presentation</td>
-                        <td style={{ padding: '10px 8px', color: '#DC2626' }}>"I am going to freeze and everyone will judge me."</td>
-                        <td style={{ padding: '10px 8px' }}>Anxiety (85%)</td>
-                        <td style={{ padding: '10px 8px' }}>Heart was racing during rehearsal</td>
-                        <td style={{ padding: '10px 8px', color: '#059669', fontWeight: 600 }}>"Feeling nervous is natural. I have prepared slides thoroughly and past meetings went well."</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#F1F5F9', borderBottom: '1px solid #CBD5E1' }}>
+                          <th style={{ padding: '8px', textAlign: 'left' }}>1. Situation</th>
+                          <th style={{ padding: '8px', textAlign: 'left' }}>2. Automatic Thought</th>
+                          <th style={{ padding: '8px', textAlign: 'left' }}>3. Emotion / Rating</th>
+                          <th style={{ padding: '8px', textAlign: 'left' }}>4. Evidence Supporting</th>
+                          <th style={{ padding: '8px', textAlign: 'left' }}>5. Alternative Thought</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
+                          <td style={{ padding: '10px 8px' }}>Preparing for Monday team presentation</td>
+                          <td style={{ padding: '10px 8px', color: '#DC2626' }}>"I am going to freeze and everyone will judge me."</td>
+                          <td style={{ padding: '10px 8px' }}>Anxiety (85%)</td>
+                          <td style={{ padding: '10px 8px' }}>Heart was racing during rehearsal</td>
+                          <td style={{ padding: '10px 8px', color: '#059669', fontWeight: 600 }}>"Feeling nervous is natural. I have prepared slides thoroughly and past meetings went well."</td>
+                        </tr>
+                      </tbody>
+                    </table>
 
-                  <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#EFF6FF', borderRadius: '6px', borderLeft: '4px solid #3B82F6' }}>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#1E40AF' }}>
-                      💡 <strong>Clinical Guidance:</strong> Notice how challenging the catastrophizing distortion drops expected anxiety from 85% to 35%. Take 3 diaphragmatic breaths when thoughts arise.
-                    </p>
+                    <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#EFF6FF', borderRadius: '6px', borderLeft: '4px solid #3B82F6' }}>
+                      <p style={{ margin: 0, fontSize: '13px', color: '#1E40AF' }}>
+                        💡 <strong>Clinical Guidance:</strong> Notice how challenging the catastrophizing distortion drops expected anxiety from 85% to 35%. Take 3 diaphragmatic breaths when thoughts arise.
+                      </p>
+                    </div>
                   </div>
                 </div>
+              )}
+            </div>
+          ) : isLocalMainView ? (
+            /* Local User Camera View (Main Stage) */
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: '#0F172A',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: 'inset 0 0 60px rgba(0,0,0,0.5)',
+                border: '2px solid rgba(56, 189, 248, 0.6)'
+              }}
+            >
+              {isVideoOn && cameraStreamActive ? (
+                <video
+                  ref={handleLocalVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  onLoadedMetadata={e => e.target.play().catch(() => {})}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    transform: 'scaleX(-1)'
+                  }}
+                />
+              ) : (
+                <div style={{ textAlign: 'center', padding: '24px' }}>
+                  <div
+                    style={{
+                      width: '90px',
+                      height: '90px',
+                      borderRadius: '50%',
+                      backgroundColor: '#0284C7',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '32px',
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      margin: '0 auto 16px',
+                      boxShadow: '0 8px 24px rgba(2, 132, 199, 0.4)'
+                    }}
+                  >
+                    {currentUser?.firstName ? currentUser.firstName[0] : 'Y'}
+                  </div>
+                  <h3 style={{ margin: '0 0 8px', fontSize: '18px', color: '#F1F5F9' }}>
+                    {currentUser?.firstName || 'Your'} Camera Feed
+                  </h3>
+                  <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#94A3B8', maxWidth: '420px', lineHeight: '1.5' }}>
+                    {cameraError || 'Camera is not currently streaming. Click the button below to connect your webcam.'}
+                  </p>
+                  <button
+                    onClick={startCamera}
+                    style={{
+                      padding: '10px 22px',
+                      backgroundColor: '#0284C7',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)'
+                    }}
+                  >
+                    <Camera size={16} /> Connect Camera
+                  </button>
+                </div>
+              )}
+
+              {/* Overlay banner for Local Main View */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  left: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                  backdropFilter: 'blur(8px)',
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  fontSize: '12px',
+                  color: '#38BDF8',
+                  fontWeight: 600,
+                  zIndex: 5
+                }}
+              >
+                <span>Self-View: Main Stage (HD)</span>
+                <button
+                  onClick={() => setIsLocalMainView(false)}
+                  style={{
+                    marginLeft: '6px',
+                    padding: '3px 8px',
+                    backgroundColor: 'rgba(255,255,255,0.12)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '4px',
+                    color: '#F8FAFC',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <RefreshCw size={11} /> Switch to Participant
+                </button>
+              </div>
+
+              {/* Bottom tag on Main Stage */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '16px',
+                  left: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                  backdropFilter: 'blur(8px)',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  fontSize: '12px',
+                  color: '#94A3B8'
+                }}
+              >
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E' }} />
+                <span style={{ color: '#F1F5F9', fontWeight: 600 }}>{currentUser?.firstName || 'You'} (Me)</span>
+                <span>• HD Camera (Mirrored)</span>
               </div>
             </div>
           ) : (
@@ -635,29 +1058,103 @@ const TelehealthPage = () => {
                   </div>
                 </div>
               )}
+            </div>
+          )}
 
-              {/* PiP Self-View */}
+          {/* Floating Picture-in-Picture (PiP) Window */}
+          <div
+            onClick={() => setIsLocalMainView(!isLocalMainView)}
+            title={isLocalMainView ? "Click to switch back to participant view" : "Click to expand your camera to main screen"}
+            style={{
+              position: 'absolute',
+              bottom: '24px',
+              right: '24px',
+              width: '230px',
+              height: '150px',
+              backgroundColor: '#0F172A',
+              borderRadius: '12px',
+              border: isMicOn ? '2px solid rgba(34, 197, 94, 0.6)' : '2px solid rgba(255,255,255,0.15)',
+              boxShadow: '0 12px 32px rgba(0,0,0,0.7)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 25,
+              cursor: 'pointer',
+              transition: 'transform 0.15s ease, border 0.15s ease'
+            }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.03)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            {isLocalMainView ? (
+              /* When Main is Self, PiP shows Remote Participant */
               <div
                 style={{
-                  position: 'absolute',
-                  bottom: '16px',
-                  right: '16px',
-                  width: '210px',
-                  height: '140px',
-                  backgroundColor: '#0F172A',
-                  borderRadius: '12px',
-                  border: isMicOn ? '2px solid rgba(34, 197, 94, 0.6)' : '2px solid rgba(255,255,255,0.15)',
-                  boxShadow: '0 12px 28px rgba(0,0,0,0.6)',
-                  overflow: 'hidden',
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: '#1E293B',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  zIndex: 10,
-                  transition: 'border 0.2s ease'
+                  position: 'relative'
                 }}
               >
-                {isVideoOn ? (
+                <div
+                  style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '50%',
+                    backgroundColor: '#0284C7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontWeight: 700,
+                    fontSize: '16px'
+                  }}
+                >
+                  {isClient ? 'SC' : 'TM'}
+                </div>
+                <span style={{ fontSize: '11px', color: '#F1F5F9', fontWeight: 600, marginTop: '4px' }}>
+                  {otherPartyName}
+                </span>
+                <span style={{ fontSize: '10px', color: '#38BDF8', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <RefreshCw size={10} /> Click to restore
+                </span>
+              </div>
+            ) : (
+              /* Normal PiP: Shows User Camera */
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: '#1E293B',
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden'
+                }}
+              >
+                {isVideoOn && cameraStreamActive ? (
+                  <video
+                    ref={handleLocalVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    onLoadedMetadata={e => e.target.play().catch(() => {})}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      transform: 'scaleX(-1)',
+                      position: 'absolute',
+                      inset: 0
+                    }}
+                  />
+                ) : isVideoOn ? (
                   <div
                     style={{
                       width: '100%',
@@ -667,26 +1164,38 @@ const TelehealthPage = () => {
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      position: 'relative'
+                      padding: '8px',
+                      textAlign: 'center'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startCamera();
                     }}
                   >
                     <div
                       style={{
-                        width: '52px',
-                        height: '52px',
+                        width: '40px',
+                        height: '40px',
                         borderRadius: '50%',
-                        backgroundColor: '#475569',
+                        backgroundColor: '#0284C7',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: 'white',
                         fontWeight: 700,
-                        fontSize: '18px'
+                        fontSize: '15px'
                       }}
                     >
                       {currentUser?.firstName ? currentUser.firstName[0] : 'Y'}
                     </div>
-                    <span style={{ fontSize: '11px', color: '#94A3B8', marginTop: '6px' }}>Your Camera</span>
+                    <span style={{ fontSize: '10px', color: '#38BDF8', marginTop: '4px', fontWeight: 600 }}>
+                      Click to Start Camera
+                    </span>
+                    {cameraError && (
+                      <span style={{ fontSize: '9px', color: '#F87171', marginTop: '2px', maxWidth: '190px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {cameraError}
+                      </span>
+                    )}
                   </div>
                 ) : (
                   <div style={{ textAlign: 'center', color: '#64748B', padding: '10px' }}>
@@ -695,30 +1204,65 @@ const TelehealthPage = () => {
                   </div>
                 )}
 
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: '6px',
-                    left: '8px',
-                    right: '8px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    backgroundColor: 'rgba(0,0,0,0.6)',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    fontSize: '10px',
-                    color: '#E2E8F0'
-                  }}
-                >
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {currentUser?.firstName || 'You'} (Me)
-                  </span>
-                  {isMicOn ? <Mic size={10} color="#22C55E" /> : <MicOff size={10} color="#EF4444" />}
-                </div>
+                {/* Expand to Main Stage icon button at top right of PiP */}
+                {isVideoOn && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsLocalMainView(true);
+                    }}
+                    title="Expand your camera to main stage"
+                    style={{
+                      position: 'absolute',
+                      top: '6px',
+                      right: '6px',
+                      backgroundColor: 'rgba(0,0,0,0.65)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '4px',
+                      color: '#FFFFFF',
+                      padding: '3px 6px',
+                      fontSize: '10px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      zIndex: 5
+                    }}
+                  >
+                    <Maximize2 size={10} />
+                  </button>
+                )}
               </div>
+            )}
+
+            {/* Bottom info pill */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '6px',
+                left: '8px',
+                right: '8px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: 'rgba(0,0,0,0.65)',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                fontSize: '10px',
+                color: '#E2E8F0',
+                zIndex: 6
+              }}
+            >
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {isLocalMainView ? otherPartyName : `${currentUser?.firstName || 'You'} (Me)`}
+              </span>
+              {isLocalMainView ? (
+                <span style={{ fontSize: '9px', color: '#38BDF8' }}>Remote</span>
+              ) : (
+                isMicOn ? <Mic size={10} color="#22C55E" /> : <MicOff size={10} color="#EF4444" />
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Chat Drawer */}
@@ -890,10 +1434,8 @@ const TelehealthPage = () => {
         </button>
 
         <button
-          onClick={() => {
-            setIsVideoOn(!isVideoOn);
-            toast.info(isVideoOn ? 'Camera turned off' : 'Camera turned on');
-          }}
+          onClick={handleToggleVideo}
+          data-testid="toggle-camera-btn"
           title={isVideoOn ? 'Turn off camera' : 'Turn on camera'}
           style={{
             width: '48px',
@@ -913,26 +1455,25 @@ const TelehealthPage = () => {
         </button>
 
         <button
-          onClick={() => {
-            setIsScreenSharing(!isScreenSharing);
-            toast.info(!isScreenSharing ? 'Screen sharing started' : 'Screen sharing stopped');
-          }}
+          onClick={handleToggleScreenShare}
+          data-testid="toggle-screenshare-btn"
           title={isScreenSharing ? 'Stop Screen Share' : 'Share Screen'}
           style={{
             width: '48px',
             height: '48px',
             borderRadius: '50%',
-            border: 'none',
+            border: isScreenSharing ? '2px solid #38BDF8' : 'none',
             backgroundColor: isScreenSharing ? '#0284C7' : 'rgba(255,255,255,0.1)',
             color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
+            boxShadow: isScreenSharing ? '0 0 16px rgba(56, 189, 248, 0.5)' : 'none',
             transition: 'all 0.15s ease'
           }}
         >
-          <Share2 size={20} />
+          <Share2 size={20} color={isScreenSharing ? '#FFFFFF' : '#CBD5E1'} />
         </button>
 
         <button

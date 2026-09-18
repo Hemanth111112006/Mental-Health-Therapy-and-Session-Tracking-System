@@ -1,5 +1,5 @@
 {
-  "name": "mhtsts-frontend",
+  "name": "mindcare-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -20,6 +20,7 @@
     "@mui/material": "^9.2.0",
     "axios": "^1.18.1",
     "bootstrap": "^5.3.8",
+    "framer-motion": "^13.4.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.24.0",
     "react": "^19.2.7",

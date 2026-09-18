@@ -126,9 +126,8 @@ const PsychiatristDashboard = () => {
   const handleScheduleAction = (session) => {
     if (session.status === 'COMPLETED') {
       navigate(`/session-notes/new?client=${encodeURIComponent(session.client)}`);
-    } else if (session.status === 'IN_PROGRESS') {
-      toast.info(`Connecting to telehealth consultation with ${session.client}...`);
-      navigate('/telehealth');
+    } else if (session.modality === 'Telehealth') {
+      navigate(`/telehealth/${session.id || 1}`);
     } else {
       navigate('/psychiatrist/appointments');
     }
@@ -213,12 +212,21 @@ const PsychiatristDashboard = () => {
                       {session.status}
                     </span>
                   </div>
-                  <div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {session.modality === 'Telehealth' && session.status !== 'COMPLETED' && session.status !== 'CANCELLED' && (
+                      <button 
+                        className="mc-btn mc-btn-primary mc-btn-sm"
+                        onClick={() => navigate(`/telehealth/${session.id || 1}`)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, backgroundColor: '#2563EB', color: '#fff', border: 'none', fontWeight: 600 }}
+                      >
+                        <VideocamOutlinedIcon style={{ fontSize: 14 }} /> Join Therapy
+                      </button>
+                    )}
                     <button 
                       className="mc-btn mc-btn-outline mc-btn-sm"
                       onClick={() => handleScheduleAction(session)}
                     >
-                      {session.status === 'COMPLETED' ? 'Edit Note' : (session.status === 'IN_PROGRESS' ? 'Join Call' : 'Manage')}
+                      {session.status === 'COMPLETED' ? 'Edit Note' : 'Manage'}
                     </button>
                   </div>
                 </div>

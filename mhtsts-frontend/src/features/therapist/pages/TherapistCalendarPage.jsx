@@ -1,11 +1,13 @@
-﻿import { toast } from '../../../utils/toast';
+import { toast } from '../../../utils/toast';
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CalendarDays, ChevronLeft, ChevronRight, Video, User, Plus, Loader } from 'lucide-react';
 import { appointmentApi } from '../../../api/appointmentApi';
 
 const timeSlots = ['09:00 AM','10:00 AM','11:00 AM','12:00 PM','01:00 PM','02:00 PM','03:00 PM','04:00 PM'];
 
 const TherapistCalendarPage = () => {
+  const navigate = useNavigate();
   const [view, setView] = useState('Day');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [appointments, setAppointments] = useState([]);
@@ -86,10 +88,10 @@ const TherapistCalendarPage = () => {
                   <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{appt.type || 'Session'} - {clientName}</span>
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{appt.startTime}</span>
                 </div>
-                {appt.telehealth && (
+                {(appt.telehealth || appt.modality === 'TELEHEALTH') && (
                   <div style={{ marginTop: '4px' }}>
-                    <button onClick={() => toast.info('Telehealth link will be provided by your administrator.')} style={{ padding: '4px 10px', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Video size={11} /> Join Call
+                    <button onClick={() => navigate(`/telehealth/${appt.id || 1}`)} style={{ padding: '5px 12px', backgroundColor: '#2563EB', color: 'white', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', width: 'fit-content' }}>
+                      <Video size={12} /> Join Therapy
                     </button>
                   </div>
                 )}

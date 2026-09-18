@@ -372,8 +372,8 @@ const CommunityResourcesPage = () => {
 
       {/* ── MODAL: Resource Details ── */}
       {selectedResource && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="mc-card" style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', borderRadius: '16px', background: 'var(--card-bg)', border: '1px solid var(--border-primary)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="mc-card" style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', borderRadius: '16px', backgroundColor: 'var(--bg-card, #FFFFFF)', border: '1px solid var(--border-primary)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', borderBottom: '1px solid var(--border-primary)', paddingBottom: '12px' }}>
               <div>
                 <span style={{ 
@@ -459,8 +459,8 @@ const CommunityResourcesPage = () => {
 
       {/* ── MODAL: Direct Referral to Resource ── */}
       {referralModalResource && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="mc-card" style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', borderRadius: '16px', background: 'var(--card-bg)', border: '1px solid var(--border-primary)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="mc-card" style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', borderRadius: '16px', backgroundColor: 'var(--bg-card, #FFFFFF)', border: '1px solid var(--border-primary)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid var(--border-primary)', paddingBottom: '12px' }}>
               <div>
                 <h2 style={{ fontSize: '17px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
@@ -566,18 +566,18 @@ const CommunityResourcesPage = () => {
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', paddingTop: '14px', borderTop: '1px solid var(--border-primary)' }}>
                 <button 
                   type="button" 
-                  className="mc-btn mc-btn-ghost" 
                   onClick={() => setReferralModalResource(null)}
+                  style={{ padding: '8px 18px', borderRadius: '8px', border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
                   className="mc-btn mc-btn-primary" 
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}
                 >
                   <Send size={13} /> Submit Referral
                 </button>

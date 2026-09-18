@@ -353,6 +353,12 @@ const SchedulePage = () => {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          {(appt.telehealth || appt.modality === 'TELEHEALTH') && appt.status !== 'COMPLETED' && appt.status !== 'CANCELLED' && (
+                            <button
+                              onClick={() => navigate(`/telehealth/${appt.id || 1}`)}
+                              style={{ padding: '4px 10px', fontSize: 11, fontWeight: 600, border: 'none', background: '#2563EB', color: '#FFFFFF', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            >📹 Join Therapy</button>
+                          )}
                           <button
                             onClick={() => setSelectedAppt(appt)}
                             style={{ padding: '4px 10px', fontSize: 11, fontWeight: 600, border: '1px solid #3B82F6', background: '#EFF6FF', color: '#1D4ED8', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}
@@ -567,6 +573,18 @@ const SchedulePage = () => {
               {selectedAppt.notes && <div style={{ display: 'flex', gap: 8 }}><strong style={{ minWidth: 130 }}>Notes:</strong><span style={{ color: 'var(--text-secondary)' }}>{selectedAppt.notes}</span></div>}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+              {(selectedAppt.telehealth || selectedAppt.modality === 'TELEHEALTH') && selectedAppt.status !== 'COMPLETED' && selectedAppt.status !== 'CANCELLED' && (
+                <button
+                  onClick={() => {
+                    const targetId = selectedAppt.id || 1;
+                    setSelectedAppt(null);
+                    navigate(`/telehealth/${targetId}`);
+                  }}
+                  style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', background: '#2563EB', color: '#FFFFFF', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  📹 Join Therapy
+                </button>
+              )}
               <Button variant="outline" onClick={() => openEditModal(selectedAppt)}>Edit Appointment</Button>
               <Button variant="ghost" onClick={() => setSelectedAppt(null)}>Close</Button>
             </div>

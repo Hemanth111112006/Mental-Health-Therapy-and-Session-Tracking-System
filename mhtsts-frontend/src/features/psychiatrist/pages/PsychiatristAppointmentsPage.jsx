@@ -12,7 +12,8 @@ import {
   AlertCircle,
   Play,
   RotateCcw,
-  Plus
+  Plus,
+  User
 } from 'lucide-react';
 import { appointmentApi } from '../../../api/appointmentApi';
 
@@ -85,6 +86,7 @@ const PsychiatristAppointmentsPage = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [modalityFilter, setModalityFilter] = useState('ALL');
   const [actionLoading, setActionLoading] = useState(null);
 
   const getClientName = (appt) => {
@@ -197,6 +199,7 @@ const PsychiatristAppointmentsPage = () => {
     const sessionType = window.prompt('Session Type (1: Medication Management, 2: Psychiatric Evaluation, 3: Psychiatric Follow-up):', '1');
     const typeMap = { '1': 'Medication Management', '2': 'Psychiatric Evaluation', '3': 'Psychiatric Follow-up' };
     const finalType = typeMap[sessionType] || sessionType || 'Medication Management';
+    const isOnline = window.confirm('Is this an Online Consultation (Telehealth Video)?\nClick OK for Online (Telehealth Video), or Cancel for In-Person (Clinic).');
 
     const newAppt = {
       id: Date.now(),
@@ -206,14 +209,14 @@ const PsychiatristAppointmentsPage = () => {
       endTime: time,
       type: finalType,
       appointmentType: 'MEDICATION_MANAGEMENT',
-      modality: 'TELEHEALTH',
-      telehealth: true,
+      modality: isOnline ? 'TELEHEALTH' : 'IN_PERSON',
+      telehealth: isOnline,
       status: 'CONFIRMED',
       participants: [{ client: { id: Date.now(), firstName: clientName, lastName: '' } }]
     };
 
     setAppointments(prev => [newAppt, ...prev]);
-    toast.success(`Psychiatric appointment scheduled for ${clientName} on ${date} at ${time}!`);
+    toast.success(`Psychiatric appointment scheduled for ${clientName} (${isOnline ? 'Online Telehealth' : 'In-Person'}) on ${date} at ${time}!`);
 
     try {
       await appointmentApi.scheduleAppointment({ 
@@ -221,7 +224,7 @@ const PsychiatristAppointmentsPage = () => {
         startTime: time, 
         endTime: time, 
         type: 'MEDICATION_MANAGEMENT', 
-        telehealth: true, 
+        telehealth: isOnline, 
         clientId: 1 
       });
     } catch {
@@ -325,6 +328,10 @@ const PsychiatristAppointmentsPage = () => {
   };
 
   const filtered = appointments.filter(a => {
+    const isTele = !!a.telehealth || a.modality === 'TELEHEALTH';
+    if (modalityFilter === 'TELEHEALTH' && !isTele) return false;
+    if (modalityFilter === 'IN_PERSON' && isTele) return false;
+
     const nameMatch = getClientName(a).toLowerCase().includes(searchTerm.toLowerCase()) ||
                       (a.type || a.appointmentType || '').toLowerCase().includes(searchTerm.toLowerCase());
     if (!nameMatch) return false;
@@ -355,13 +362,44 @@ const PsychiatristAppointmentsPage = () => {
         </button>
       </div>
 
-      <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-primary)', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ flex: '1 1 280px', position: 'relative' }}>
-          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-          <input type="text" placeholder="Search clients or consultation types..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '8px', border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', boxSizing: 'border-box', fontSize: '13px' }} />
+      <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-primary)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ flex: '1 1 280px', position: 'relative' }}>
+            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+            <input type="text" placeholder="Search clients or consultation types..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '8px', border: '1px solid var(--border-primary)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', boxSizing: 'border-box', fontSize: '13px' }} />
+          </div>
+
+          {/* Modality Filter Tabs */}
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', backgroundColor: 'var(--bg-primary)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
+            {[
+              { id: 'ALL', label: 'All Modes' },
+              { id: 'TELEHEALTH', label: '📹 Online (Telehealth)' },
+              { id: 'IN_PERSON', label: '🏢 In-Person' }
+            ].map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setModalityFilter(m.id)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: modalityFilter === m.id ? 700 : 500,
+                  backgroundColor: modalityFilter === m.id ? '#2563EB' : 'transparent',
+                  color: modalityFilter === m.id ? 'white' : 'var(--text-secondary)',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+
+        {/* Status Filter Tabs */}
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginRight: '4px' }}>Status:</span>
           {[
             { id: 'ALL', label: 'All' },
             { id: 'CHECKED_IN', label: 'Checked In' },
@@ -373,7 +411,7 @@ const PsychiatristAppointmentsPage = () => {
               key={f.id}
               onClick={() => setStatusFilter(f.id)}
               style={{
-                padding: '6px 12px',
+                padding: '5px 12px',
                 borderRadius: '6px',
                 fontSize: '12px',
                 fontWeight: statusFilter === f.id ? 600 : 500,
@@ -393,7 +431,7 @@ const PsychiatristAppointmentsPage = () => {
         {filtered.length === 0 ? (
           <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
             <CalendarIcon size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
-            <p>No appointments found.</p>
+            <p>No appointments found for the selected filters.</p>
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -402,6 +440,7 @@ const PsychiatristAppointmentsPage = () => {
                 <th style={{ padding: '16px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600 }}>Client</th>
                 <th style={{ padding: '16px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600 }}>Time</th>
                 <th style={{ padding: '16px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600 }}>Session Type</th>
+                <th style={{ padding: '16px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600 }}>Modality</th>
                 <th style={{ padding: '16px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600 }}>Status</th>
                 <th style={{ padding: '16px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600 }}>Actions</th>
               </tr>
@@ -416,6 +455,7 @@ const PsychiatristAppointmentsPage = () => {
                 const isUpcoming = ['SCHEDULED', 'CONFIRMED', 'RESCHEDULED', 'PENDING'].includes(statusUpper);
                 const isCompleted = statusUpper === 'COMPLETED' || statusUpper === 'ATTENDED';
                 const isCancelled = statusUpper === 'CANCELLED' || statusUpper === 'CANCELED';
+                const isTele = !!appt.telehealth || appt.modality === 'TELEHEALTH';
 
                 return (
                   <tr key={appt.id} style={{ borderBottom: idx !== filtered.length - 1 ? '1px solid var(--border-primary)' : 'none' }}>
@@ -435,6 +475,17 @@ const PsychiatristAppointmentsPage = () => {
                       </div>
                     </td>
                     <td style={{ padding: '16px' }}>
+                      {isTele ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
+                          <Video size={13} /> Online (Telehealth)
+                        </span>
+                      ) : (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
+                          <User size={13} /> In-Person (Clinic)
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '16px' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: `${statusColor}15`, color: statusColor, borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: statusColor }}></span>
                         {appt.status ? appt.status.replace('_', ' ') : 'Unknown'}
@@ -443,6 +494,17 @@ const PsychiatristAppointmentsPage = () => {
                     <td style={{ padding: '16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         
+                        {/* Prominent JOIN THERAPY Button for any Online Session that is active or upcoming */}
+                        {isTele && (isCheckedIn || isUpcoming) && (
+                          <button 
+                            onClick={() => navigate(`/telehealth/${appt.id || 1}`)} 
+                            title="Join Telehealth Video Call Room"
+                            style={{ padding: '6px 14px', backgroundColor: '#2563EB', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', boxShadow: '0 2px 5px rgba(37, 99, 235, 0.3)' }}
+                          >
+                            <Video size={14} /> Join Therapy
+                          </button>
+                        )}
+
                         {/* CHECKED_IN / IN_PROGRESS */}
                         {isCheckedIn && (
                           <>
@@ -467,15 +529,6 @@ const PsychiatristAppointmentsPage = () => {
                         {/* SCHEDULED / CONFIRMED / RESCHEDULED / PENDING */}
                         {isUpcoming && (
                           <>
-                            {(appt.telehealth || appt.modality === 'TELEHEALTH') && (
-                              <button 
-                                onClick={() => toast.info(`Connecting to telehealth consultation with ${clientName}...`)} 
-                                title="Join Telehealth Video Call"
-                                style={{ padding: '6px 12px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                              >
-                                <Video size={14} /> Join Call
-                              </button>
-                            )}
                             <button 
                               onClick={() => handleCheckIn(appt.id)} 
                               disabled={actionLoading === appt.id + '-checkin'} 
