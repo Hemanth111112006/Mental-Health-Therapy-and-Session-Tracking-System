@@ -3,13 +3,12 @@ import axios from 'axios';
 // ─── Single Axios instance used across the entire frontend ───────────────────
 // Base URL is read from the Vite environment variable VITE_API_BASE_URL.
 // The Vite dev-server proxy (/api → http://localhost:8080) is kept as a fallback
-// so that the app also works without the env file in development.
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8080/api' : '/api'),
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000, // 15 s – avoids hanging requests when backend is slow
+  timeout: 5000, // 5s timeout for fast cloud fallback
 });
 
 // ─── Request interceptor ─────────────────────────────────────────────────────
